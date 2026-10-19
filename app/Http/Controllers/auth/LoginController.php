@@ -3,63 +3,36 @@
 namespace App\Http\Controllers\auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Service\Auth\LoginService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function __construct(private readonly LoginService $loginService) {}
+
+    public function index(): View
     {
-        //
+        return view('auth.login');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(LoginRequest $request): RedirectResponse
     {
-        //
+        if (! $this->loginService->authenticate($request->validated(), $request->boolean('remember'))) {
+            return back()
+                ->withErrors(['email' => 'Las credenciales no son correctas o el acceso está deshabilitado.'])
+                ->onlyInput('email');
+        }
+
+        return redirect()->intended(route('home'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function destroy(Request $request): RedirectResponse
     {
-        //
-    }
+        $this->loginService->logout($request);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return redirect()->route('login');
     }
 }

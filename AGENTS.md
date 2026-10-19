@@ -2,14 +2,13 @@
 
 ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vite + Tailwind 4). No hay API ni portal publico: todo se sirve por `routes/web.php`.
 
-## Estado actual del login (leer antes de tocar auth)
+## Login (estado actual)
 
-- El scaffold esta incompleto: `routes/web.php` solo tiene `/` -> `welcome`; no existen rutas ni vistas de login. `LoginController` esta vacio, `LoginRequest::authorize()` devuelve `false` y `LoginService::logout()` no compila.
-- Requisito de diseno: **card de credenciales centrada** sobre un **fondo de pantalla completa con espacio para un video**. Usa una capa de video absoluta (`object-cover`) detras de la card (`relative z-10`), no reutilices `welcome.blade.php` (es el scaffold con CSS inline gigante).
-- Crea la vista en `resources/views/auth/` y cargala con `@vite(['resources/css/app.css', 'resources/js/app.js'])` + `@fonts` para conservar Instrument Sans.
+- Rutas: `GET /login` (`login`), `POST /login` (`login.store`) y `POST /logout` (`logout`). Vista en `resources/views/auth/login.blade.php`, controlador `App\Http\Controllers\auth\LoginController` y logica en `App\Service\Auth\LoginService`.
+- UI: card de credenciales centrada sobre fondo de pantalla completa; el video de fondo va en `public/videos/login.mp4` (capa `object-cover`). Si no existe el archivo, queda un gradiente de respaldo.
+- Autenticacion contra `empleados` exigiendo `acceso = 'activo'`; al entrar se regenera la sesion y se actualiza `ultimo_acceso_at`.
 - `configuracion_empresa.imagenes_login` es un JSON de **imagenes**, no de video. Si el video debe ser configurable, agrega una migracion nueva (despues de `000030`); si es fijo, usa un asset en `public/` y `asset()`.
 - Solo existe el modelo `Empleado`; el resto del esquema no tiene modelos Eloquent. Los seeders no crean empleados, asi que no hay usuario de prueba por defecto.
-- `App\Models\Empleado` declara `protected $Fillable` (mayuscula); no lo usa Laravel. Al tocarlo, corrige a `$fillable`.
 
 ## Auth
 
@@ -45,7 +44,7 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 
 - En este checkout `.env` apunta a MySQL local (`DB_DATABASE=Viagest`, usuario root). `.env.example` sigue con `DB_CONNECTION=sqlite` y `DB_DATABASE=laravel`, que no es una ruta valida.
 - phpunit fuerza sqlite `:memory:`; los tests no dependen de MySQL. La app productiva es MySQL 8.0.16+.
-- Solo hay tests de ejemplo; `composer test` pasa aunque el login siga roto.
+- Los tests de vista usan `$this->withoutVite()` porque el manifiesto de Vite no existe en CI; los tests de login estan en `tests/Feature/Auth/LoginTest.php`.
 
 ## Datos iniciales
 

@@ -2,20 +2,35 @@
 
 namespace App\Service\Auth;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Empleado;
-class LoginService{
 
-    private Empleado $Empleado;
-   public function authenticate(array $credentials): bool{
-       if(Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])){
-           session()->regenerate();
-           return true;
-       }
-       return false;
-   }
+class LoginService
+{
+    public function authenticate(array $credentials, bool $remember = false): bool
+    {
+        $authenticated = Auth::attempt([
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+            'acceso' => 'activo',
+        ], $remember);
 
-   public function logout(){
-       if ($Empleado)
-   }
+        if (! $authenticated) {
+            return false;
+        }
+
+        session()->regenerate();
+
+        Auth::user()?->forceFill(['ultimo_acceso_at' => now()])->save();
+
+        return true;
+    }
+
+    public function logout(Request $request): void
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+    }
 }
