@@ -1,6 +1,21 @@
 # ViaGest - AGENTS.md
 
-ERP para agencia de viajes (Laravel 13, PHP ^8.3, Vite + Tailwind 4).
+ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vite + Tailwind 4). No hay API ni portal publico: todo se sirve por `routes/web.php`.
+
+## Estado actual del login (leer antes de tocar auth)
+
+- El scaffold esta incompleto: `routes/web.php` solo tiene `/` -> `welcome`; no existen rutas ni vistas de login. `LoginController` esta vacio, `LoginRequest::authorize()` devuelve `false` y `LoginService::logout()` no compila.
+- Requisito de diseno: **card de credenciales centrada** sobre un **fondo de pantalla completa con espacio para un video**. Usa una capa de video absoluta (`object-cover`) detras de la card (`relative z-10`), no reutilices `welcome.blade.php` (es el scaffold con CSS inline gigante).
+- Crea la vista en `resources/views/auth/` y cargala con `@vite(['resources/css/app.css', 'resources/js/app.js'])` + `@fonts` para conservar Instrument Sans.
+- `configuracion_empresa.imagenes_login` es un JSON de **imagenes**, no de video. Si el video debe ser configurable, agrega una migracion nueva (despues de `000030`); si es fijo, usa un asset en `public/` y `asset()`.
+- Solo existe el modelo `Empleado`; el resto del esquema no tiene modelos Eloquent. Los seeders no crean empleados, asi que no hay usuario de prueba por defecto.
+- `App\Models\Empleado` declara `protected $Fillable` (mayuscula); no lo usa Laravel. Al tocarlo, corrige a `$fillable`.
+
+## Auth
+
+- La tabla de acceso es `empleados` (email/password/rol_id/acceso), NO `users`. `config/auth.php` apunta a `App\Models\Empleado`, aunque el provider siga llamandose `users`. No reintroduzcas `users`.
+- El esquema exige coherencia entre `acceso`, `rol_id` y `password` (`ck_empleados_acceso`); valida esa regla en la app antes de guardar.
+- Namespaces/ubicaciones actuales: controlador en `app/Http/Controllers/auth` con `App\Http\Controllers\auth` (minuscula), request en `App\Http\Requests\Auth` (mayuscula) y servicio en `App\Service\Auth` (singular). En Linux deben coincidir exactamente carpeta y namespace.
 
 ## Fuente de verdad del dominio
 
@@ -17,23 +32,20 @@ ERP para agencia de viajes (Laravel 13, PHP ^8.3, Vite + Tailwind 4).
 - Se usan nombres de constraint por defecto de Laravel (no los `fk_*`/`idx_*` del SQL). Los nombres `uq_*`/`idx_*` explicitos solo donde el SQL los exigia.
 - Dependencia especial: `pagos_cliente` tiene FK compuesta `(cuota_id, venta_id) -> cuotas_cobro (id, venta_id)`. Conserva el unique `uq_cuotas_cobro_id_venta` o esa FK falla.
 
-## Auth
-
-- La tabla de acceso es `empleados` (email/password/rol_id/acceso), NO `users`. Modelo: `App\Models\Empleado`; `config/auth.php` apunta ahi. No reintroduzcas `users`.
-
 ## Comandos (Windows / PowerShell)
 
 - Instalar: `composer install`, luego `npm install`.
 - Base de datos: `php artisan migrate --seed` (o `php artisan migrate:fresh --seed`).
-- Tests: `composer test` o `php artisan test` (sqlite en memoria).
+- Tests: `composer test` o `php artisan test` (sqlite en memoria). Un test puntual: `php artisan test --filter=<nombre>`.
 - Formato: `vendor\bin\pint` (usar en archivos tocados; `--test` solo verifica). Correr antes de dar por terminado.
-- Frontend: `npm run dev`, build `npm run build`.
+- Frontend: `npm run dev`, build `npm run build`. No hay linter/formatter JS ni typecheck.
 - `composer dev` ejecuta `php artisan dev` (sirve todo el stack).
 
 ## Config de BD
 
-- `.env` trae `DB_CONNECTION=sqlite` con `DB_DATABASE=laravel` (valor invalido como ruta). Para MySQL real: `DB_CONNECTION=mysql` + host/credenciales. La app productiva es MySQL 8.0.16+.
-- phpunit fuerza sqlite `:memory:`; los tests no dependen de MySQL.
+- En este checkout `.env` apunta a MySQL local (`DB_DATABASE=Viagest`, usuario root). `.env.example` sigue con `DB_CONNECTION=sqlite` y `DB_DATABASE=laravel`, que no es una ruta valida.
+- phpunit fuerza sqlite `:memory:`; los tests no dependen de MySQL. La app productiva es MySQL 8.0.16+.
+- Solo hay tests de ejemplo; `composer test` pasa aunque el login siga roto.
 
 ## Datos iniciales
 
