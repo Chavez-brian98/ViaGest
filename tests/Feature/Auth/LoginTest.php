@@ -35,7 +35,7 @@ class LoginTest extends TestCase
             'password' => 'secret-password',
         ]);
 
-        $response->assertRedirect(route('home'));
+        $response->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs($empleado);
         $this->assertNotNull($empleado->fresh()?->ultimo_acceso_at);
     }

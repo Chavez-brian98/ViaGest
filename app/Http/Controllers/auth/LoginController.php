@@ -26,7 +26,7 @@ class LoginController extends Controller
                 ->onlyInput('email');
         }
 
-        return redirect()->intended(route('home'));
+        return redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse

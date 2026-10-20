@@ -39,9 +39,6 @@
                         <h1 class="mt-5 text-2xl font-semibold tracking-tight text-slate-900">
                             Iniciar sesión
                         </h1>
-                        <p class="mt-2 text-sm text-slate-500">
-                            Acceso interno de empleados a ViaGest
-                        </p>
                     </div>
 
                     @if ($errors->any())

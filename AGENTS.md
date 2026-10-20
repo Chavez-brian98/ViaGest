@@ -18,7 +18,7 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 
 ## Fuente de verdad del dominio
 
-- `schema_erp_agencia_viajes_v2.sql` (raiz) define 29 tablas + 5 vistas MySQL 8. Es el contrato del modelo de datos; consultalo antes de tocar tablas.
+- El esquema vive en las migraciones `database/migrations/2026_10_13_*`: `000001`-`000029` son las 29 tablas y `000030` las 5 vistas `v_*`. El antiguo `schema_erp_agencia_viajes_v2.sql` ya no esta en el repo; no lo busques como contrato.
 - Convenciones del esquema: snake_case en espanol y plural; PK `id`; FK `<entidad>_id`; `ENUM` para estados/tipos; dinero `DECIMAL(12,2)`; porcentajes/valores `DECIMAL(10,4)`; `created_at`/`updated_at`.
 - Datos derivados (totales, saldos, cupos disponibles, precio de paquete) NO se guardan en tablas: viven en las vistas `v_*`. No agregues columnas para ellos.
 - Reglas de negocio (solapamiento de agenda de guias, cupos al vender, coherencia pasaporte/documento) se validan en la aplicacion, no solo en la BD.
@@ -27,8 +27,8 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 
 - Una migracion por tabla, en `database/migrations/2026_10_13_0000NN_*`, numeradas en orden de dependencias FK. Al agregar tablas, continua despues de `000030`. No reordenes ni consolides.
 - Deben ser **portables** (solo Schema/Blueprint). La suite de tests corre en sqlite `:memory:` (`phpunit.xml`), asi que NO uses DDL crudo de MySQL, funciones MySQL ni columnas generadas especificas. Las vistas (`2026_10_13_000030_create_erp_views.php`) ramifican por driver (`DB::getDriverName()`).
-- Los `CHECK` del SQL **no** se traducen a migraciones (Blueprint no los soporta): aplicalos en la app o en validacion. No los agregues como SQL crudo.
-- Se usan nombres de constraint por defecto de Laravel (no los `fk_*`/`idx_*` del SQL). Los nombres `uq_*`/`idx_*` explicitos solo donde el SQL los exigia.
+- Los `CHECK` del diseno original **no** se traducen a migraciones (Blueprint no los soporta): aplicalos en la app o en validacion. No los agregues como SQL crudo.
+- Se usan nombres de constraint por defecto de Laravel (no `fk_*`/`idx_*` heredados). Los nombres `uq_*`/`idx_*` explicitos solo donde el diseno original los exigia.
 - Dependencia especial: `pagos_cliente` tiene FK compuesta `(cuota_id, venta_id) -> cuotas_cobro (id, venta_id)`. Conserva el unique `uq_cuotas_cobro_id_venta` o esa FK falla.
 
 ## Comandos (Windows / PowerShell)
@@ -44,7 +44,30 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 
 - En este checkout `.env` apunta a MySQL local (`DB_DATABASE=Viagest`, usuario root). `.env.example` sigue con `DB_CONNECTION=sqlite` y `DB_DATABASE=laravel`, que no es una ruta valida.
 - phpunit fuerza sqlite `:memory:`; los tests no dependen de MySQL. La app productiva es MySQL 8.0.16+.
+- `database/factories` esta vacio: no hay `factory()`. `LoginTest` arma sus fixtures con `DB::table(...)->insertGetId(...)` en `ciudades`/`sucursales`/`roles` y luego `Empleado::create()`.
 - Los tests de vista usan `$this->withoutVite()` porque el manifiesto de Vite no existe en CI; los tests de login estan en `tests/Feature/Auth/LoginTest.php`.
+
+## Vistas (Blade)
+
+- `resources/views/layouts/app.blade.php` es el primer layout del proyecto (sidebar colapsable + topbar). Las vistas autenticadas lo extienden con `@extends('layouts.app')` y llenan `@section('titulo')`, `@section('contenido')` y `@push('scripts')`. El menu se define en `config/navegacion.php`.
+- `resources/views/auth/login.blade.php` sigue siendo una pagina HTML completa e independiente (con `@fonts` y `@vite`); `welcome.blade.php` es el scaffold de Laravel.
+- No hay componentes Blade ni libreria de iconos: los iconos del sidebar son SVG inline (mapa `$icons` en el layout). No hay Font Awesome.
+- Tailwind 4 se importa en `resources/css/app.css` con `@import 'tailwindcss'` y el plugin `@tailwindcss/vite`; no hay `tailwind.config.js`, PostCSS ni TypeScript. `resources/js/app.js` solo controla el sidebar.
+
+## Dashboard y layout autenticado
+
+- Al autenticar, `LoginController` redirige a `route('dashboard')` (ya no a `home`). `GET /dashboard` (`auth`) -> `App\Http\Controllers\DashboardController` -> `App\Service\Dashboard\DashboardService`.
+- `DashboardService` consulta las vistas `v_*` con Query Builder y agrega en PHP (evita funciones MySQL para mantener portabilidad sqlite/MySQL). Devuelve `metricas` + `ventasPorMes`/`ventasPorServicio`/`ventasPorSucursal`/`cuotasProximas`.
+- Graficas con **ApexCharts** (dependencia npm). Se importa solo en `resources/js/dashboard.js` (entry Vite separado; pesa ~900 kB, no lo cargues globalmente). Los datos viajan a JS por `window.dashboardCharts` con `@json`.
+- El dashboard no scrollea en `lg+`: el shell es `h-screen overflow-hidden` y las filas de graficas usan `lg:min-h-0 lg:flex-1`. En movil si hay scroll (drawer + `overflow-y-auto`).
+- Gotcha: `@json(...)` de Blade se rompe si el array va en varias lineas; pasalo en una sola linea.
+
+## Estandares de diseno y codigo (obligatorios)
+
+- **Responsivo**: toda vista debe funcionar en movil, tablet y escritorio (grids/flex + breakpoints `sm:`/`md:`/`lg:`). La card de login (`auth/login.blade.php`) es el ejemplo a seguir.
+- **Profesional**: tipografia y fuentes consistentes (`--font-sans` en `resources/css/app.css`), espaciado cuidado, paleta coherente (slate + sky/emerald) y transiciones sutiles. Evita estilos inline arbitrarios.
+- **UX/UI**: jerarquia visual clara, coherencia y uniformidad entre pantallas, navegacion simple, y accesibilidad (contraste, `aria-hidden`, labels, `autocomplete`, estados de foco y de error). Reusa las clases de la card de login.
+- **Backend limpio**: aplica SOLID, DRY y KISS al estilo ya establecido: controlador delgado que solo orquesta, validacion en `FormRequest`, logica de negocio en `app/Service`, modelos Eloquent para acceso a datos. Sin SQL crudo ni logica de negocio en la vista.
 
 ## Datos iniciales
 
