@@ -4,7 +4,7 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 
 ## Login (estado actual)
 
-- Rutas: `GET /login` (`login`), `POST /login` (`login.store`) y `POST /logout` (`logout`). Vista en `resources/views/auth/login.blade.php`, controlador `App\Http\Controllers\auth\LoginController` y logica en `App\Service\Auth\LoginService`.
+- Rutas: `GET /` (`login`) y `POST /` (`login.store`); el login vive en la raiz (no existe `/login`). Logout: `POST /logout` (`logout`). Vista en `resources/views/auth/login.blade.php`, controlador `App\Http\Controllers\auth\LoginController` y logica en `App\Service\Auth\LoginService`.
 - UI: card de credenciales centrada sobre fondo de pantalla completa; el video de fondo va en `public/videos/login.mp4` (capa `object-cover`). Si no existe el archivo, queda un gradiente de respaldo.
 - Autenticacion contra `empleados` exigiendo `acceso = 'activo'`; al entrar se regenera la sesion y se actualiza `ultimo_acceso_at`.
 - `configuracion_empresa.imagenes_login` es un JSON de **imagenes**, no de video. Si el video debe ser configurable, agrega una migracion nueva (despues de `000030`); si es fijo, usa un asset en `public/` y `asset()`.
@@ -62,10 +62,22 @@ ERP interno para agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vit
 - El dashboard no scrollea en `lg+`: el shell es `h-screen overflow-hidden` y las filas de graficas usan `lg:min-h-0 lg:flex-1`. En movil si hay scroll (drawer + `overflow-y-auto`).
 - Gotcha: `@json(...)` de Blade se rompe si el array va en varias lineas; pasalo en una sola linea.
 
+## Paleta de colores (temporal, hasta nuevo aviso)
+
+Definida como tokens de Tailwind 4 en `@theme` dentro de `resources/css/app.css`; usa las clases `bg-primary`, `text-ink`, `bg-secondary/15`, `border-ink/10`, etc.:
+
+- `--color-primary` `#0B4F6C` (azul oceano): botones, item activo del sidebar, brand.
+- `--color-secondary` `#1CA3AA` (turquesa): focos/hover, tints claros, avatar.
+- `--color-accent` `#F28F3B` (naranja): detalles decorativos y ring de foco del boton de login.
+- `--color-background` `#F5F8FA` (blanco hielo): fondo de paginas e inputs.
+- `--color-surface` `#FFFFFF`: cards y barras superiores.
+- `--color-ink` `#1F2933` (gris carbón): texto principal; `text-ink/45`-`/70` para tenue.
+- Colores semanticos (rose=error, emerald=variacion positiva, amber=pendiente) se conservan SOLO para estados de datos, no para marca. Las graficas ApexCharts (`resources/js/dashboard.js`) usan los mismos hex: si cambias la paleta, cambia ambos lugares.
+
 ## Estandares de diseno y codigo (obligatorios)
 
 - **Responsivo**: toda vista debe funcionar en movil, tablet y escritorio (grids/flex + breakpoints `sm:`/`md:`/`lg:`). La card de login (`auth/login.blade.php`) es el ejemplo a seguir.
-- **Profesional**: tipografia y fuentes consistentes (`--font-sans` en `resources/css/app.css`), espaciado cuidado, paleta coherente (slate + sky/emerald) y transiciones sutiles. Evita estilos inline arbitrarios.
+- **Profesional**: tipografia y fuentes consistentes (`--font-sans` en `resources/css/app.css`), espaciado cuidado, paleta coherente (ver seccion "Paleta de colores"; nada de colores de marca fuera de los tokens) y transiciones sutiles. Evita estilos inline arbitrarios.
 - **UX/UI**: jerarquia visual clara, coherencia y uniformidad entre pantallas, navegacion simple, y accesibilidad (contraste, `aria-hidden`, labels, `autocomplete`, estados de foco y de error). Reusa las clases de la card de login.
 - **Backend limpio**: aplica SOLID, DRY y KISS al estilo ya establecido: controlador delgado que solo orquesta, validacion en `FormRequest`, logica de negocio en `app/Service`, modelos Eloquent para acceso a datos. Sin SQL crudo ni logica de negocio en la vista.
 

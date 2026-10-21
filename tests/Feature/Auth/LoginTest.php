@@ -20,7 +20,7 @@ class LoginTest extends TestCase
 
     public function test_login_screen_can_be_rendered(): void
     {
-        $this->get('/login')
+        $this->get('/')
             ->assertOk()
             ->assertSee('Iniciar sesión')
             ->assertSee(route('login.store'), false);
@@ -30,7 +30,7 @@ class LoginTest extends TestCase
     {
         $empleado = $this->createEmpleado();
 
-        $response = $this->from('/login')->post('/login', [
+        $response = $this->from('/')->post('/', [
             'email' => $empleado->email,
             'password' => 'secret-password',
         ]);
@@ -44,12 +44,12 @@ class LoginTest extends TestCase
     {
         $empleado = $this->createEmpleado(['acceso' => 'bloqueado']);
 
-        $response = $this->from('/login')->post('/login', [
+        $response = $this->from('/')->post('/', [
             'email' => $empleado->email,
             'password' => 'secret-password',
         ]);
 
-        $response->assertRedirect('/login');
+        $response->assertRedirect('/');
         $response->assertSessionHasErrors('email');
         $this->assertGuest();
     }

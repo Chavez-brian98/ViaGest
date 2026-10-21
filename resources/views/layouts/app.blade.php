@@ -10,7 +10,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @stack('head')
     </head>
-    <body class="h-screen overflow-hidden bg-slate-100 font-sans text-slate-800 antialiased">
+        <body class="h-screen overflow-hidden bg-background font-sans text-ink antialiased">
         @php
             $icons = [
                 'home' => 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
@@ -33,19 +33,19 @@
         @endphp
 
         <div class="flex h-screen overflow-hidden">
-            <aside id="appSidebar" class="app-sidebar flex flex-col border-r border-slate-200 bg-white">
-                <div class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-100 px-4">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-slate-900/20">
+            <aside id="appSidebar" class="app-sidebar flex flex-col border-r border-ink/10 bg-surface">
+                <div class="flex h-16 shrink-0 items-center gap-3 border-b border-ink/10 px-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-white shadow-lg shadow-primary/30">
                         VG
                     </div>
                     <div class="sidebar-text min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold text-slate-900">ViaGest</p>
-                        <p class="truncate text-xs text-slate-400">Agencia de viajes</p>
+                        <p class="truncate text-sm font-semibold text-ink">ViaGest</p>
+                        <p class="truncate text-xs text-ink/45">Agencia de viajes</p>
                     </div>
                     <button
                         type="button"
                         id="sidebarToggle"
-                        class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:flex"
+                        class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink/45 transition-colors hover:bg-background hover:text-ink lg:flex"
                         title="Colapsar menu"
                         aria-label="Colapsar menu"
                     >
@@ -58,14 +58,14 @@
                 <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-4">
                     @foreach (config('navegacion.grupos') as $grupo)
                         <div>
-                            <p class="sidebar-section-title mb-1 px-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                            <p class="sidebar-section-title mb-1 px-2 text-[11px] font-bold uppercase tracking-widest text-ink/45">
                                 {{ $grupo['titulo'] }}
                             </p>
                             @foreach ($grupo['items'] as $item)
                                 @php
                                     $activo = $item['ruta'] && request()->routeIs($item['ruta']);
                                     $clase = 'flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors '
-                                        . ($activo ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900');
+                                        . ($activo ? 'bg-primary text-white shadow-sm' : 'text-ink/70 hover:bg-secondary/10 hover:text-primary');
                                 @endphp
                                 <a
                                     href="{{ $item['ruta'] ? route($item['ruta']) : '#' }}"
@@ -83,21 +83,21 @@
                     @endforeach
                 </nav>
 
-                <div class="flex shrink-0 items-center gap-3 border-t border-slate-100 px-3 py-3">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                <div class="flex shrink-0 items-center gap-3 border-t border-ink/10 px-3 py-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-primary">
                         {{ strtoupper(substr(auth()->user()?->nombres ?? 'A', 0, 1)) }}
                     </div>
                     <div class="sidebar-text min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold text-slate-900">
+                        <p class="truncate text-sm font-semibold text-ink">
                             {{ trim((auth()->user()?->nombres ?? '') . ' ' . (auth()->user()?->apellidos ?? '')) ?: 'Administrador' }}
                         </p>
-                        <p class="truncate text-xs text-slate-400">{{ auth()->user()?->email }}</p>
+                        <p class="truncate text-xs text-ink/45">{{ auth()->user()?->email }}</p>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="shrink-0">
                         @csrf
                         <button
                             type="submit"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-ink/45 transition-colors hover:bg-rose-50 hover:text-rose-600"
                             title="Cerrar sesion"
                             aria-label="Cerrar sesion"
                         >
@@ -112,11 +112,11 @@
             <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
 
             <div class="flex min-w-0 flex-1 flex-col">
-                <header class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
+                <header class="flex h-16 shrink-0 items-center gap-3 border-b border-ink/10 bg-surface px-4 sm:px-6">
                     <button
                         type="button"
                         id="sidebarOpenBtn"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink/50 transition-colors hover:bg-background hover:text-ink lg:hidden"
                         title="Abrir menu"
                         aria-label="Abrir menu"
                     >
@@ -126,10 +126,10 @@
                     </button>
 
                     <div class="min-w-0 flex-1">
-                        <h1 class="truncate text-lg font-semibold text-slate-900">@yield('titulo', 'Dashboard')</h1>
+                        <h1 class="truncate text-lg font-semibold text-ink">@yield('titulo', 'Dashboard')</h1>
                     </div>
 
-                    <span class="hidden text-sm text-slate-400 sm:block">{{ now()->format('d/m/Y') }}</span>
+                    <span class="hidden text-sm text-ink/45 sm:block">{{ now()->format('d/m/Y') }}</span>
                 </header>
 
                 <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:overflow-hidden">
