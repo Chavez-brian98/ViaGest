@@ -1,58 +1,70 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# VIAGEST
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Introducción
 
-## About Laravel
+Sistema de Gestión Empresarial (ERP) de uso estrictamente interno, desarrollado a la medida de una agencia de viajes. Centraliza en una sola plataforma lo que normalmente se reparte entre hojas de cálculo, correos y documentos sueltos: clientes, paquetes turísticos, proveedores, cobros, pagos y comisiones.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Es una aplicación web tradicional bajo el patrón MVC: las pantallas se generan en el servidor y no hay portal público ni acceso para clientes.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Descripción del proyecto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+El sistema permite crear, costear y vender paquetes turísticos integrales (vuelos, hospedaje, transporte y actividades) dentro de un flujo unificado:
 
-## Learning Laravel
+1. **Captación:** se registra el prospecto y se le da seguimiento.
+2. **Cotización:** se arma un presupuesto con fecha de caducidad a partir de los servicios del catálogo.
+3. **Venta y reserva:** al aprobarse el presupuesto se convierte en venta, con sus viajeros y servicios.
+4. **Logística:** se coordinan proveedores, cupos y guías, y se generan en PDF los vouchers, itinerarios y contratos.
+5. **Finanzas:** se controlan los cobros al cliente, los pagos a proveedores y el cálculo automático de comisiones.
+6. **Seguimiento:** un dashboard y reportes exportables muestran ingresos, gastos y rentabilidad.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Además:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Seguridad:** cada empleado inicia sesión con un rol cuyos permisos limitan qué módulos y acciones puede usar. El rol también define si ve solo su sucursal o todas.
+- **Base de datos:** MySQL normalizada (3FN) con 29 tablas, estados y tipos como ENUM, claves foráneas, restricciones e índices. Los totales, saldos y cupos disponibles se calculan en vistas y no se guardan.
+- **Multisucursal:** ventas, inventario y rendimiento se filtran por matriz y filiales.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Módulos
 
-## Agentic Development
+El sistema se organiza en 7 módulos y 21 submódulos.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+| Módulo | Submódulo | Funcionalidad principal |
+| --- | --- | --- |
+| **1. Dashboard** | Resumen Ejecutivo | Métricas clave en gráficos: ingresos, gastos, ventas mensuales y paquetes más vendidos |
+| | Alertas Rápidas | Avisos automáticos de pagos pendientes, vuelos próximos y tareas de seguimiento |
+| **2. Comercial y Ventas** | Prospectos (Leads) | Clientes potenciales, presupuestos temporales con caducidad y recordatorios de seguimiento |
+| | Directorio de Clientes | CRM con historial de compras, pasaporte, contacto y preferencias de viaje |
+| | Ventas y Reservas | Aprobación de cotizaciones y venta de paquetes completos o servicios individuales |
+| **3. Catálogo y Producto** | Paquetes Turísticos | Constructor de viajes: une servicios, suma costos netos y aplica márgenes |
+| | Inventario y Cupos | Control de espacios bloqueados o comprados por adelantado para evitar sobreventas |
+| **4. Proveedores y Logística** | Vuelos | Aerolíneas, rutas, políticas de equipaje y contactos |
+| | Hospedajes | Hoteles y hostales con tarifas netas negociadas y contactos de reserva |
+| | Transporte | Conductores afiliados o flotilla propia, rutas cubiertas y tarifas |
+| | Guías Turísticos | Perfiles, idiomas, especialidades, tarifas y agenda de disponibilidad |
+| | Gestión Documental | Generación automática en PDF de vouchers, itinerarios y contratos |
+| **5. Finanzas y Administración** | Cuentas por Cobrar | Abonos, planes de pago y saldos pendientes de clientes |
+| | Cuentas por Pagar | Registro y programación de pagos a proveedores y gastos operativos |
+| | Motor de Comisiones | Reglas automáticas para vendedores y pagos extra a guías y conductores |
+| | Reportes | Exportación a Excel o PDF para contabilidad, rentabilidad y análisis de ventas |
+| **6. Organización Interna** | Sucursales | Gestión de matriz y filiales |
+| | Empleados | Ficha del personal, asignación a sucursales y datos laborales |
+| **7. Configuración y Seguridad** | Roles y Permisos | Acceso a módulos y acciones según el cargo |
+| | Ajustes Generales | Logo, nombre comercial, zona horaria, moneda base e imágenes de inicio de sesión |
+| | Notificaciones | Reglas de alertas automáticas, internas o por correo, según eventos del sistema |
 
-```bash
-composer require laravel/boost --dev
+## Tecnologías
 
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Capa | Tecnología | Uso | Estado |
+| --- | --- | --- | --- |
+| Backend | PHP 8.3 y Laravel | Lógica de negocio, rutas, controladores, servicios y form requests | En uso |
+| Vistas | Blade | Pantallas generadas en el servidor (MVC) | En uso |
+| Base de datos | MySQL 8.0.16 o superior (InnoDB, utf8mb4) | Información transaccional del sistema | En uso |
+| Acceso a datos | Eloquent ORM | Modelos y relaciones | En uso |
+| Autenticación | Sesión de Laravel (guard `web`) | Inicio de sesión de los empleados, con límite de intentos | En uso |
+| Roles y permisos | Tablas `roles` y `rol_permisos` | Permisos por módulo y acción | En uso |
+| Gráficos | Chart.js | Métricas del Dashboard | Prevista |
+| Documentos PDF | DomPDF | Vouchers, itinerarios y contratos | Prevista |
+| Exportación | Laravel Excel | Reportes en Excel | Prevista |
+| Tareas y alertas | Colas y programador de Laravel | Notificaciones, recordatorios y vencimientos | Prevista |
+| Correo | SMTP | Alertas automáticas por correo | Prevista |
+| Servidor | Nginx en Linux | Despliegue de la aplicación | Prevista |
+| Control de versiones | Git | Código fuente y colaboración | Prevista |

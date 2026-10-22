@@ -11,6 +11,17 @@ class DashboardController extends Controller
 
     public function index(): View
     {
-        return view('dashboard', $this->dashboardService->resumen());
+        $resumen = $this->dashboardService->resumen();
+
+        return view('dashboard', [
+            'metricas' => $resumen['metricas'] ?? [],
+            'graficas' => $resumen['graficas'] ?? [],
+            'ventasPorMes' => $resumen['ventasPorMes'] ?? [],
+            'ventasPorServicio' => $resumen['ventasPorServicio'] ?? [],
+            'ventasPorSucursal' => $resumen['ventasPorSucursal'] ?? [],
+            'cuotasProximas' => $resumen['cuotasProximas'] ?? [],
+        ]);
     }
 }
+
+

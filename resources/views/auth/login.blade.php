@@ -13,12 +13,12 @@
         <div class="relative min-h-screen overflow-hidden">
             <div
                 class="absolute inset-0"
-                style="background: radial-gradient(circle at 20% 20%, rgba(28, 163, 170, 0.45), transparent 45%), radial-gradient(circle at 80% 75%, rgba(11, 79, 108, 0.7), transparent 55%), linear-gradient(135deg, #0b4f6c 0%, #1ca3aa 100%);"
+                style="background: radial-gradient(circle at 50% 20%, rgba(11, 79, 108, 0.12), transparent 65%);"
                 aria-hidden="true"
             ></div>
 
             <video
-                class="absolute inset-0 h-full w-full object-cover opacity-40"
+                class="absolute inset-0 h-full w-full object-cover opacity-70"
                 autoplay
                 muted
                 loop
@@ -28,7 +28,7 @@
                 <source src="{{ asset('videos/login.mp4') }}" type="video/mp4">
             </video>
 
-            <div class="absolute inset-0 bg-primary/55" aria-hidden="true"></div>
+            <div class="absolute inset-0 bg-slate-950/40" aria-hidden="true"></div>
 
             <div class="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
                 <main class="w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-surface p-8 shadow-2xl sm:p-10">
