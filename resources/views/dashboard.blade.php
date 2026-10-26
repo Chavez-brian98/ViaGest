@@ -175,7 +175,7 @@
                         <h2 class="text-sm font-semibold text-ink">Cuotas próximas a vencer</h2>
                         <span class="text-xs text-ink/45">Cobranza</span>
                     </header>
-                    <div class="flex-1 overflow-auto px-4 pb-4">
+                    <div class="min-h-0 flex-1 overflow-auto px-4">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="text-left text-xs text-ink/45">
@@ -203,11 +203,17 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="py-4 text-center text-xs text-ink/45">Sin cuotas próximas</td></tr>
+                                    <tr><td colspan="6" class="py-4 text-center text-xs text-ink/45">Sin cuotas pr��ximas</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
+
+                    @if ($cuotasProximas->total() > 0)
+                        <div class="border-t border-ink/10 px-4 py-2">
+                            @include('partials.paginacion', ['paginator' => $cuotasProximas, 'etiqueta' => 'cuotas'])
+                        </div>
+                    @endif
                 </section>
             </div>
         </div>

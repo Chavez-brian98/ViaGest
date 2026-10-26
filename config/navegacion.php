@@ -23,7 +23,7 @@ return [
         [
             'titulo' => 'Clientes',
             'items' => [
-                ['label' => 'Clientes', 'icono' => 'users', 'ruta' => null],
+                ['label' => 'Clientes', 'icono' => 'users', 'ruta' => 'clientes.index'],
                 ['label' => 'Prospectos', 'icono' => 'sparkles', 'ruta' => null],
             ],
         ],

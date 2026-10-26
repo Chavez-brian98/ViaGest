@@ -30,6 +30,10 @@
                 'map' => 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z',
                 'cog' => 'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z',
             ];
+
+            $usuario = auth()->user();
+            $fotoSidebar = $usuario?->fotoPerfilUrl();
+            $perfilActivo = request()->routeIs('perfil.*');
         @endphp
 
         <div class="flex h-screen overflow-hidden">
@@ -83,17 +87,30 @@
                     @endforeach
                 </nav>
 
-                <div class="flex shrink-0 items-center gap-3 border-t border-ink/10 px-3 py-3">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-primary">
-                        {{ strtoupper(substr(auth()->user()?->nombres ?? 'A', 0, 1)) }}
-                    </div>
-                    <div class="sidebar-text min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold text-ink">
-                            {{ trim((auth()->user()?->nombres ?? '') . ' ' . (auth()->user()?->apellidos ?? '')) ?: 'Administrador' }}
-                        </p>
-                        <p class="truncate text-xs text-ink/45">{{ auth()->user()?->email }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="shrink-0">
+                <div class="sidebar-footer flex shrink-0 items-center gap-2 border-t border-ink/10 px-3 py-3">
+                    <a
+                        href="{{ route('perfil.edit') }}"
+                        class="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 transition-colors {{ $perfilActivo ? 'bg-secondary/10' : 'hover:bg-background' }}"
+                        title="Abrir mi perfil"
+                        @if ($perfilActivo) aria-current="page" @endif
+                    >
+                        @if ($fotoSidebar)
+                            <img
+                                src="{{ $fotoSidebar }}"
+                                alt="Foto de {{ $usuario->nombreCompleto() }}"
+                                class="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-secondary/20"
+                            >
+                        @else
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-semibold text-primary">
+                                {{ $usuario?->iniciales() ?? 'U' }}
+                            </span>
+                        @endif
+                        <span class="sidebar-text min-w-0 flex-1">
+                            <span class="block truncate text-sm font-semibold text-ink">{{ $usuario?->nombreCompleto() ?? 'Usuario' }}</span>
+                            <span class="block truncate text-xs text-ink/45">{{ $usuario?->email }}</span>
+                        </span>
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="sidebar-logout shrink-0">
                         @csrf
                         <button
                             type="submit"

@@ -3,6 +3,7 @@
 namespace App\Service\Dashboard;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
@@ -75,6 +76,7 @@ class DashboardService
             $labels[] = $this->meses[$mes->month - 1].' '.$mes->format('y');
             $series[] = round((float) $ventas->filter(fn ($venta) => str_starts_with((string) $venta->fecha_venta, $mes->format('Y-m')))->sum('total'), 2);
         }
+
         return ['labels' => $labels, 'series' => $series];
     }
 
@@ -91,6 +93,7 @@ class DashboardService
             $query->whereRaw("to_char(t.fecha_venta, 'YYYY-MM') = ?", [$mesActual]);
         }
         $filas = $query->selectRaw('s.nombre as etiqueta, SUM(t.total) as total')->groupBy('s.nombre')->orderByDesc('total')->get();
+
         return ['labels' => $filas->pluck('etiqueta')->all(), 'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all()];
     }
 
@@ -108,6 +111,7 @@ class DashboardService
             ->get();
 
         $mapa = ['vuelo' => 'Vuelos', 'hospedaje' => 'Hospedajes', 'transporte' => 'Transporte', 'actividad' => 'Actividades', 'paquete' => 'Paquetes', 'otro' => 'Otros'];
+
         return ['labels' => $filas->map(fn ($fila) => $mapa[$fila->etiqueta] ?? ucfirst((string) $fila->etiqueta))->all(), 'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all()];
     }
 
@@ -117,6 +121,7 @@ class DashboardService
         $pendiente = (float) DB::table('v_cuotas_cobro_estado')->where('estado_pago', 'pendiente')->sum('saldo');
         $parcial = (float) DB::table('v_cuotas_cobro_estado')->where('estado_pago', 'parcial')->sum('saldo');
         $vencido = (float) DB::table('v_cuotas_cobro_estado')->where('estado_pago', 'vencida')->sum('saldo');
+
         return ['labels' => ['Pagado', 'Parcial', 'Pendiente', 'Vencido'], 'series' => [round($pagado, 2), round($parcial, 2), round($pendiente, 2), round($vencido, 2)]];
     }
 
@@ -131,6 +136,7 @@ class DashboardService
             ->orderByDesc('total')
             ->limit(5)
             ->get();
+
         return ['labels' => $filas->pluck('vendedor')->all(), 'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all()];
     }
 
@@ -145,6 +151,7 @@ class DashboardService
             ->orderBy('c.disponible')
             ->limit(6)
             ->get();
+
         return ['labels' => $filas->pluck('etiqueta')->all(), 'series' => $filas->pluck('disponible')->map(fn ($v) => (int) $v)->all()];
     }
 
@@ -159,6 +166,7 @@ class DashboardService
             $etiquetas[] = $this->meses[$mes->month - 1].' '.$mes->format('y');
             $montos[] = round((float) $ventas->filter(fn ($venta) => str_starts_with((string) $venta->fecha_venta, $mes->format('Y-m')))->sum('total'), 2);
         }
+
         return ['labels' => $etiquetas, 'data' => $montos];
     }
 
@@ -176,6 +184,7 @@ class DashboardService
             ->get();
 
         $mapa = ['vuelo' => 'Vuelos', 'hospedaje' => 'Hospedajes', 'transporte' => 'Transporte', 'actividad' => 'Actividades', 'paquete' => 'Paquetes', 'otro' => 'Otros'];
+
         return $filas->map(fn ($fila) => ['label' => $mapa[$fila->tipo] ?? ucfirst((string) $fila->tipo), 'value' => round((float) $fila->total, 2)])->all();
     }
 
@@ -192,34 +201,38 @@ class DashboardService
             $query->whereRaw("to_char(t.fecha_venta, 'YYYY-MM') = ?", [$mesActual]);
         }
         $filas = $query->selectRaw('s.nombre as sucursal, SUM(t.total) as total')->groupBy('s.nombre')->orderByDesc('total')->get();
+
         return $filas->map(fn ($fila) => ['label' => $fila->sucursal, 'value' => round((float) $fila->total, 2)])->all();
     }
 
-    public function cuotasProximas(int $limite = 8): array
+    public function cuotasProximas(int $porPagina = 8): LengthAwarePaginator
     {
-        return DB::table('v_cuotas_cobro_estado as c')
+        $cuotas = DB::table('v_cuotas_cobro_estado as c')
             ->join('ventas as v', 'v.id', '=', 'c.venta_id')
             ->join('clientes as cl', 'cl.id', '=', 'v.cliente_id')
             ->whereIn('c.estado_pago', ['pendiente', 'parcial', 'vencida'])
             ->orderByRaw("CASE WHEN c.estado_pago='vencida' THEN 0 WHEN c.estado_pago='parcial' THEN 1 ELSE 2 END")
             ->orderBy('c.fecha_vencimiento')
-            ->limit($limite)
-            ->get([
+            ->paginate($porPagina, [
                 'c.numero', 'c.fecha_vencimiento', 'c.monto', 'c.pagado', 'c.saldo', 'c.estado_pago',
                 'v.codigo as venta_codigo',
                 'cl.nombres', 'cl.apellidos', 'cl.razon_social',
-            ])
-            ->map(function ($fila) {
-                $persona = trim(($fila->nombres ?? '').' '.($fila->apellidos ?? ''));
-                $cliente = $persona !== '' ? $persona : ($fila->razon_social ?? 'Cliente');
-                return [
-                    'venta' => $fila->venta_codigo,
-                    'cliente' => $cliente,
-                    'cuota' => (int) $fila->numero,
-                    'vence' => CarbonImmutable::parse($fila->fecha_vencimiento)->format('d/m/Y'),
-                    'saldo' => (float) $fila->saldo,
-                    'estado' => $fila->estado_pago,
-                ];
-            })->all();
+            ], 'cuotas_page')
+            ->onEachSide(1)
+            ->withQueryString();
+
+        return $cuotas->through(function ($fila) {
+            $persona = trim(($fila->nombres ?? '').' '.($fila->apellidos ?? ''));
+            $cliente = $persona !== '' ? $persona : ($fila->razon_social ?? 'Cliente');
+
+            return [
+                'venta' => $fila->venta_codigo,
+                'cliente' => $cliente,
+                'cuota' => (int) $fila->numero,
+                'vence' => CarbonImmutable::parse($fila->fecha_vencimiento)->format('d/m/Y'),
+                'saldo' => (float) $fila->saldo,
+                'estado' => $fila->estado_pago,
+            ];
+        });
     }
 }

@@ -42,6 +42,139 @@
     display: none;
 }
 
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root) {
+    animation: viagest-page-out 170ms ease-in both;
+}
+
+::view-transition-new(root) {
+    animation: viagest-page-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes viagest-page-out {
+    to {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes viagest-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.estado-switch,
+.estado-form-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 5.75rem;
+    height: 1.75rem;
+    padding: 0 0.625rem;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: #be123c;
+    color: #ffffff;
+    box-shadow:
+        inset 0 1px 3px rgb(15 23 42 / 0.28),
+        0 0 0 3px rgb(190 18 60 / 0.1);
+    cursor: pointer;
+    transition:
+        background-color 300ms ease,
+        box-shadow 300ms ease,
+        filter 200ms ease,
+        opacity 200ms ease;
+}
+
+.estado-switch::before,
+.estado-form-switch::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 58%);
+    pointer-events: none;
+}
+
+.estado-switch:hover:not(:disabled),
+.estado-form-switch:hover {
+    filter: brightness(1.06);
+}
+
+.estado-switch[aria-checked='true'],
+input:checked + .estado-form-switch {
+    background-color: #047857;
+    box-shadow:
+        inset 0 1px 3px rgb(15 23 42 / 0.22),
+        0 0 0 3px rgb(4 120 87 / 0.12);
+}
+
+.estado-switch:focus-visible,
+input:focus-visible + .estado-form-switch {
+    outline: 3px solid rgb(28 163 170 / 0.35);
+    outline-offset: 2px;
+}
+
+.estado-switch:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+.estado-texto {
+    position: relative;
+    z-index: 1;
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-shadow: 0 1px 1px rgb(15 23 42 / 0.2);
+    transition: opacity 200ms ease;
+}
+
+.estado-switch-dot {
+    position: relative;
+    z-index: 1;
+    width: 0.4rem;
+    height: 0.4rem;
+    flex: 0 0 auto;
+    border-radius: 9999px;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 0.18);
+    transition:
+        transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 300ms ease;
+}
+
+.estado-switch[aria-checked='true'] .estado-switch-dot,
+input:checked + .estado-form-switch .estado-switch-dot {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: none;
+    }
+
+    .estado-switch,
+    .estado-switch-dot,
+    .estado-form-switch,
+    .estado-form-switch .estado-switch-dot,
+    .estado-texto {
+        transition: none;
+    }
+}
+
 @media (max-width: 1023px) {
     .app-sidebar {
         position: fixed;
