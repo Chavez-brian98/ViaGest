@@ -39,7 +39,7 @@ return [
             'titulo' => 'Sistema',
             'items' => [
                 ['label' => 'Reportes', 'icono' => 'chart', 'ruta' => null],
-                ['label' => 'Empleados', 'icono' => 'user-group', 'ruta' => null],
+                ['label' => 'Empleados', 'icono' => 'user-group', 'ruta' => 'empleados.index'],
                 ['label' => 'Sucursales', 'icono' => 'map', 'ruta' => null],
                 ['label' => 'Configuracion', 'icono' => 'cog', 'ruta' => null],
             ],

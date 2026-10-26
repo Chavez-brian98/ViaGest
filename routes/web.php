@@ -27,5 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/clientes/{cliente}/deshabilitar', [ClienteController::class, 'deshabilitar'])
         ->name('clientes.deshabilitar');
 
+    Route::patch('/empleados/{empleado}/estado', [App\Http\Controllers\EmpleadoController::class, 'actualizarEstado'])
+        ->name('empleados.estado');
+
     Route::resource('clientes', ClienteController::class)->except(['show']);
+    Route::resource('empleados', App\Http\Controllers\EmpleadoController::class)->except(['show']);
 });

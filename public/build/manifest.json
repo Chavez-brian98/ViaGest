@@ -28,7 +28,7 @@
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-D1uZ5qDE.css",
+    "file": "assets/app-DsHGZs_K.css",
     "name": "app",
     "names": [
       "app.css"
@@ -52,6 +52,12 @@
     "file": "assets/dashboard-BAYQC5MY.js",
     "name": "dashboard",
     "src": "resources/js/dashboard.js",
+    "isEntry": true
+  },
+  "resources/js/empleados.js": {
+    "file": "assets/empleados-CIEYDV21.js",
+    "name": "empleados",
+    "src": "resources/js/empleados.js",
     "isEntry": true
   }
 }
