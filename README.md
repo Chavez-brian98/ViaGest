@@ -61,7 +61,8 @@ El sistema se organiza en 7 módulos y 21 submódulos.
 | Acceso a datos | Eloquent ORM | Modelos y relaciones | En uso |
 | Autenticación | Sesión de Laravel (guard `web`) | Inicio de sesión de los empleados, con límite de intentos | En uso |
 | Roles y permisos | Tablas `roles` y `rol_permisos` | Permisos por módulo y acción | En uso |
-| Gráficos | Chart.js | Métricas del Dashboard | Prevista |
+| Gráficos | ApexCharts | Métricas del Dashboard | En uso |
+| Confirmaciones | SweetAlert2 | Avisos y confirmación de acciones destructivas | En uso |
 | Documentos PDF | DomPDF | Vouchers, itinerarios y contratos | Prevista |
 | Exportación | Laravel Excel | Reportes en Excel | Prevista |
 | Tareas y alertas | Colas y programador de Laravel | Notificaciones, recordatorios y vencimientos | Prevista |

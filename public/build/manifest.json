@@ -28,7 +28,7 @@
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DlNZmdkX.css",
+    "file": "assets/app-CRXnPKnB.css",
     "name": "app",
     "names": [
       "app.css"
@@ -42,10 +42,34 @@
     "src": "resources/js/app.js",
     "isEntry": true
   },
+  "resources/js/auditoria.js": {
+    "file": "assets/auditoria-BzeMdvtE.js",
+    "name": "auditoria",
+    "src": "resources/js/auditoria.js",
+    "isEntry": true
+  },
+  "resources/js/clientes.js": {
+    "file": "assets/clientes-9TGP17J8.js",
+    "name": "clientes",
+    "src": "resources/js/clientes.js",
+    "isEntry": true
+  },
   "resources/js/dashboard.js": {
     "file": "assets/dashboard-BAYQC5MY.js",
     "name": "dashboard",
     "src": "resources/js/dashboard.js",
+    "isEntry": true
+  },
+  "resources/js/empleados.js": {
+    "file": "assets/empleados-CIEYDV21.js",
+    "name": "empleados",
+    "src": "resources/js/empleados.js",
+    "isEntry": true
+  },
+  "resources/js/roles.js": {
+    "file": "assets/roles-CJ_BqJJb.js",
+    "name": "roles",
+    "src": "resources/js/roles.js",
     "isEntry": true
   }
 }

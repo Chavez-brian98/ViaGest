@@ -23,7 +23,7 @@ return [
         [
             'titulo' => 'Clientes',
             'items' => [
-                ['label' => 'Clientes', 'icono' => 'users', 'ruta' => null],
+                ['label' => 'Clientes', 'icono' => 'users', 'ruta' => 'clientes.index'],
                 ['label' => 'Prospectos', 'icono' => 'sparkles', 'ruta' => null],
             ],
         ],
@@ -39,8 +39,10 @@ return [
             'titulo' => 'Sistema',
             'items' => [
                 ['label' => 'Reportes', 'icono' => 'chart', 'ruta' => null],
-                ['label' => 'Empleados', 'icono' => 'user-group', 'ruta' => null],
+                ['label' => 'Empleados', 'icono' => 'user-group', 'ruta' => 'empleados.index'],
+                ['label' => 'Roles y permisos', 'icono' => 'lock', 'ruta' => 'roles.index'],
                 ['label' => 'Sucursales', 'icono' => 'map', 'ruta' => null],
+                ['label' => 'Auditoría', 'icono' => 'shield', 'ruta' => 'auditoria.index'],
                 ['label' => 'Configuracion', 'icono' => 'cog', 'ruta' => null],
             ],
         ],
