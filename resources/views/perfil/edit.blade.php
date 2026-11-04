@@ -30,7 +30,7 @@
                 </span>
                 <div class="min-w-0">
                     <h1 class="text-lg font-semibold text-ink">Mi perfil</h1>
-                    <p class="text-xs text-ink/45">Administra tus datos personales, laborales y de acceso.</p>
+                    <p class="text-xs text-ink/45">Administra tu foto de perfil. Los demás datos son administrados por Recursos Humanos.</p>
                 </div>
             </div>
         </section>
@@ -163,109 +163,38 @@
                 <section class="rounded-2xl border border-ink/10 bg-surface p-5 shadow-sm sm:p-6">
                     <div class="mb-5">
                         <h2 class="text-base font-semibold text-ink">Datos personales</h2>
-                        <p class="text-xs text-ink/45">Información de identificación y contacto.</p>
+                        <p class="text-xs text-ink/45">Esta información es de solo lectura.</p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <label for="nombres" class="{{ $labelBase }}">Nombres {!! $requerido !!}</label>
-                            <input
-                                id="nombres"
-                                name="nombres"
-                                type="text"
-                                value="{{ old('nombres', $empleado->nombres) }}"
-                                maxlength="100"
-                                required
-                                autocomplete="given-name"
-                                class="{{ $inputBase }} {{ $errors->has('nombres') ? $inputError : $inputNormal }}"
-                            >
-                            @error('nombres')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Nombres</span>
+                            <span class="text-sm text-ink">{{ $empleado->nombres }}</span>
                         </div>
 
-                        <div>
-                            <label for="apellidos" class="{{ $labelBase }}">Apellidos {!! $requerido !!}</label>
-                            <input
-                                id="apellidos"
-                                name="apellidos"
-                                type="text"
-                                value="{{ old('apellidos', $empleado->apellidos) }}"
-                                maxlength="100"
-                                required
-                                autocomplete="family-name"
-                                class="{{ $inputBase }} {{ $errors->has('apellidos') ? $inputError : $inputNormal }}"
-                            >
-                            @error('apellidos')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Apellidos</span>
+                            <span class="text-sm text-ink">{{ $empleado->apellidos }}</span>
                         </div>
 
-                        <div>
-                            <label for="tipo_documento" class="{{ $labelBase }}">Tipo de documento {!! $requerido !!}</label>
-                            <select
-                                id="tipo_documento"
-                                name="tipo_documento"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('tipo_documento') ? $inputError : $inputNormal }}"
-                            >
-                                <option value="dui" @selected(old('tipo_documento', $empleado->tipo_documento) === 'dui')>DUI</option>
-                                <option value="pasaporte" @selected(old('tipo_documento', $empleado->tipo_documento) === 'pasaporte')>Pasaporte</option>
-                                <option value="carnet_residente" @selected(old('tipo_documento', $empleado->tipo_documento) === 'carnet_residente')>Carnet de residente</option>
-                                <option value="otro" @selected(old('tipo_documento', $empleado->tipo_documento) === 'otro')>Otro</option>
-                            </select>
-                            @error('tipo_documento')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Tipo de documento</span>
+                            <span class="text-sm text-ink">{{ ucfirst($empleado->tipo_documento ?? '—') }}</span>
                         </div>
 
-                        <div>
-                            <label for="numero_documento" class="{{ $labelBase }}">Número de documento {!! $requerido !!}</label>
-                            <input
-                                id="numero_documento"
-                                name="numero_documento"
-                                type="text"
-                                value="{{ old('numero_documento', $empleado->numero_documento) }}"
-                                maxlength="30"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('numero_documento') ? $inputError : $inputNormal }}"
-                            >
-                            @error('numero_documento')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Número de documento</span>
+                            <span class="text-sm text-ink">{{ $empleado->numero_documento ?? '—' }}</span>
                         </div>
 
-                        <div>
-                            <label for="email" class="{{ $labelBase }}">Correo electrónico {!! $requerido !!}</label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value="{{ old('email', $empleado->email) }}"
-                                maxlength="150"
-                                required
-                                autocomplete="email"
-                                class="{{ $inputBase }} {{ $errors->has('email') ? $inputError : $inputNormal }}"
-                            >
-                            @error('email')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Correo electrónico</span>
+                            <span class="text-sm text-ink">{{ $empleado->email }}</span>
                         </div>
 
-                        <div>
-                            <label for="telefono" class="{{ $labelBase }}">Teléfono</label>
-                            <input
-                                id="telefono"
-                                name="telefono"
-                                type="tel"
-                                value="{{ old('telefono', $empleado->telefono) }}"
-                                maxlength="25"
-                                autocomplete="tel"
-                                class="{{ $inputBase }} {{ $errors->has('telefono') ? $inputError : $inputNormal }}"
-                            >
-                            @error('telefono')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Teléfono</span>
+                            <span class="text-sm text-ink">{{ $empleado->telefono ?? '—' }}</span>
                         </div>
                     </div>
                 </section>
@@ -273,109 +202,38 @@
                 <section class="rounded-2xl border border-ink/10 bg-surface p-5 shadow-sm sm:p-6">
                     <div class="mb-5">
                         <h2 class="text-base font-semibold text-ink">Información laboral</h2>
-                        <p class="text-xs text-ink/45">Puesto, sucursal y condiciones de trabajo.</p>
+                        <p class="text-xs text-ink/45">Esta información es de solo lectura.</p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <label for="cargo" class="{{ $labelBase }}">Cargo {!! $requerido !!}</label>
-                            <input
-                                id="cargo"
-                                name="cargo"
-                                type="text"
-                                value="{{ old('cargo', $empleado->cargo) }}"
-                                maxlength="80"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('cargo') ? $inputError : $inputNormal }}"
-                            >
-                            @error('cargo')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Cargo</span>
+                            <span class="text-sm text-ink">{{ $empleado->cargo ?? '—' }}</span>
                         </div>
 
-                        <div>
-                            <label for="sucursal_id" class="{{ $labelBase }}">Sucursal {!! $requerido !!}</label>
-                            <select
-                                id="sucursal_id"
-                                name="sucursal_id"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('sucursal_id') ? $inputError : $inputNormal }}"
-                            >
-                                @foreach ($sucursales as $sucursal)
-                                    <option value="{{ $sucursal->id }}" @selected((string) old('sucursal_id', $empleado->sucursal_id) === (string) $sucursal->id)>
-                                        {{ $sucursal->nombre }}{{ $sucursal->estado === 'inactiva' ? ' (inactiva)' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('sucursal_id')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Sucursal</span>
+                            <span class="text-sm text-ink">{{ $empleado->sucursal?->nombre ?? '—' }}</span>
                         </div>
 
-                        <div>
-                            <label for="tipo_contrato" class="{{ $labelBase }}">Tipo de contrato {!! $requerido !!}</label>
-                            <select
-                                id="tipo_contrato"
-                                name="tipo_contrato"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('tipo_contrato') ? $inputError : $inputNormal }}"
-                            >
-                                <option value="indefinido" @selected(old('tipo_contrato', $empleado->tipo_contrato) === 'indefinido')>Indefinido</option>
-                                <option value="plazo_fijo" @selected(old('tipo_contrato', $empleado->tipo_contrato) === 'plazo_fijo')>Plazo fijo</option>
-                                <option value="servicios_profesionales" @selected(old('tipo_contrato', $empleado->tipo_contrato) === 'servicios_profesionales')>Servicios profesionales</option>
-                            </select>
-                            @error('tipo_contrato')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Tipo de contrato</span>
+                            <span class="text-sm text-ink">{{ ucfirst(str_replace('_', ' ', $empleado->tipo_contrato ?? '—')) }}</span>
                         </div>
 
-                        <div>
-                            <label for="salario_base" class="{{ $labelBase }}">Salario base</label>
-                            <div class="relative">
-                                <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-ink/40">$</span>
-                                <input
-                                    id="salario_base"
-                                    name="salario_base"
-                                    type="number"
-                                    value="{{ old('salario_base', $empleado->salario_base) }}"
-                                    min="0"
-                                    max="99999999.99"
-                                    step="0.01"
-                                    class="{{ $inputBase }} pl-8 {{ $errors->has('salario_base') ? $inputError : $inputNormal }}"
-                                >
-                            </div>
-                            @error('salario_base')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Salario base</span>
+                            <span class="text-sm text-ink">${{ number_format($empleado->salario_base, 2) }}</span>
                         </div>
 
-                        <div>
-                            <label for="fecha_ingreso" class="{{ $labelBase }}">Fecha de ingreso {!! $requerido !!}</label>
-                            <input
-                                id="fecha_ingreso"
-                                name="fecha_ingreso"
-                                type="date"
-                                value="{{ old('fecha_ingreso', $empleado->fecha_ingreso?->format('Y-m-d')) }}"
-                                required
-                                class="{{ $inputBase }} {{ $errors->has('fecha_ingreso') ? $inputError : $inputNormal }}"
-                            >
-                            @error('fecha_ingreso')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Fecha de ingreso</span>
+                            <span class="text-sm text-ink">{{ $empleado->fecha_ingreso?->format('d/m/Y') ?? '—' }}</span>
                         </div>
 
-                        <div>
-                            <label for="fecha_salida" class="{{ $labelBase }}">Fecha de salida</label>
-                            <input
-                                id="fecha_salida"
-                                name="fecha_salida"
-                                type="date"
-                                value="{{ old('fecha_salida', $empleado->fecha_salida?->format('Y-m-d')) }}"
-                                class="{{ $inputBase }} {{ $errors->has('fecha_salida') ? $inputError : $inputNormal }}"
-                            >
-                            @error('fecha_salida')
-                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-ink/80">Fecha de salida</span>
+                            <span class="text-sm text-ink">{{ $empleado->fecha_salida?->format('d/m/Y') ?? '—' }}</span>
                         </div>
                     </div>
                 </section>
@@ -383,7 +241,7 @@
                 <section class="rounded-2xl border border-ink/10 bg-surface p-5 shadow-sm sm:p-6">
                     <div class="mb-5">
                         <h2 class="text-base font-semibold text-ink">Seguridad</h2>
-                        <p class="text-xs text-ink/45">Déjalo en blanco si no deseas cambiar tu contraseña.</p>
+                        <p class="text-xs text-ink/45">Puedes cambiar tu contraseña en cualquier momento.</p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">

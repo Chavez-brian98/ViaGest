@@ -37,7 +37,7 @@
                 <div class="min-w-0">
                     <h1 class="text-lg font-semibold text-ink">Empleados</h1>
                     <p class="text-xs text-ink/45">Gestión del personal administrativo y operativo</p>
-                </div}
+                </div>
             </div>
         </section>
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class Empleado extends Authenticatable
@@ -58,5 +59,27 @@ class Empleado extends Authenticatable
         return $this->foto_perfil
             ? Storage::disk('public')->url($this->foto_perfil)
             : null;
+    }
+
+    public function esAdministrador(): bool
+    {
+        return strtolower((string) $this->rol?->nombre) === 'administrador';
+    }
+
+    public function tienePermiso(string $modulo, string $accion = 'ver'): bool
+    {
+        if ($this->esAdministrador()) {
+            return true;
+        }
+
+        if (! $this->rol_id) {
+            return false;
+        }
+
+        return DB::table('rol_permisos')
+            ->where('rol_id', $this->rol_id)
+            ->where('modulo', $modulo)
+            ->where('accion', $accion)
+            ->exists();
     }
 }

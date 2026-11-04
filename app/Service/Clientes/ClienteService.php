@@ -4,10 +4,12 @@ namespace App\Service\Clientes;
 
 use App\Models\Cliente;
 use App\Models\Sucursal;
+use App\Service\Auditoria\AuditoriaService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ClienteService
@@ -50,20 +52,54 @@ class ClienteService
     {
         $datos['estado'] ??= 'activo';
 
-        return Cliente::create($datos);
+        $cliente = Cliente::create($datos);
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'crear',
+            'tabla' => 'clientes',
+            'registro_id' => $cliente->id,
+            'datos_nuevos' => $cliente->toArray(),
+        ]);
+
+        return $cliente;
     }
 
     public function actualizar(Cliente $cliente, array $datos): Cliente
     {
-        $cliente->update($datos);
+        $anterior = $cliente->toArray();
 
-        return $cliente->refresh();
+        $cliente->update($datos);
+        $cliente->refresh();
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'actualizar',
+            'tabla' => 'clientes',
+            'registro_id' => $cliente->id,
+            'datos_anteriores' => $anterior,
+            'datos_nuevos' => $cliente->toArray(),
+        ]);
+
+        return $cliente;
     }
 
     public function actualizarEstado(Cliente $cliente, string $estado): Cliente
     {
         if ($cliente->estado !== $estado) {
+            $anterior = $cliente->toArray();
+
             $cliente->update(['estado' => $estado]);
+            $cliente->refresh();
+
+            AuditoriaService::registrar([
+                'empleado_id' => Auth::id(),
+                'accion' => 'actualizar',
+                'tabla' => 'clientes',
+                'registro_id' => $cliente->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $cliente->toArray(),
+            ]);
         }
 
         return $cliente;
@@ -84,7 +120,17 @@ class ClienteService
             throw new DomainException('No se puede eliminar: el cliente tiene ventas, viajeros o prospectos asociados.');
         }
 
+        $anterior = $cliente->toArray();
+
         $cliente->delete();
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'eliminar',
+            'tabla' => 'clientes',
+            'registro_id' => $cliente->id,
+            'datos_anteriores' => $anterior,
+        ]);
     }
 
     public function sucursalesActivas(): Collection

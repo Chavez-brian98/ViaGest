@@ -40,7 +40,9 @@ return [
             'items' => [
                 ['label' => 'Reportes', 'icono' => 'chart', 'ruta' => null],
                 ['label' => 'Empleados', 'icono' => 'user-group', 'ruta' => 'empleados.index'],
+                ['label' => 'Roles y permisos', 'icono' => 'lock', 'ruta' => 'roles.index'],
                 ['label' => 'Sucursales', 'icono' => 'map', 'ruta' => null],
+                ['label' => 'Auditoría', 'icono' => 'shield', 'ruta' => 'auditoria.index'],
                 ['label' => 'Configuracion', 'icono' => 'cog', 'ruta' => null],
             ],
         ],

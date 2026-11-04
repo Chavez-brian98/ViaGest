@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\auth\LoginController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\RolController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -27,9 +30,23 @@ Route::middleware('auth')->group(function () {
     Route::patch('/clientes/{cliente}/deshabilitar', [ClienteController::class, 'deshabilitar'])
         ->name('clientes.deshabilitar');
 
-    Route::patch('/empleados/{empleado}/estado', [App\Http\Controllers\EmpleadoController::class, 'actualizarEstado'])
+    Route::patch('/empleados/{empleado}/estado', [EmpleadoController::class, 'actualizarEstado'])
         ->name('empleados.estado');
 
+    Route::patch('/empleados/{empleado}/deshabilitar', [EmpleadoController::class, 'deshabilitar'])
+        ->name('empleados.deshabilitar');
+
+    Route::patch('/roles/{role}/estado', [RolController::class, 'actualizarEstado'])
+        ->name('roles.estado');
+
     Route::resource('clientes', ClienteController::class)->except(['show']);
-    Route::resource('empleados', App\Http\Controllers\EmpleadoController::class)->except(['show']);
+    Route::resource('empleados', EmpleadoController::class)->except(['show']);
+
+    Route::middleware('permiso:roles_permisos,ver')->group(function () {
+        Route::resource('roles', RolController::class)->except(['show']);
+    });
+
+    Route::middleware('es_administrador')->group(function () {
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria.index');
+    });
 });

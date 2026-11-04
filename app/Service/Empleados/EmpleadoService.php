@@ -4,10 +4,12 @@ namespace App\Service\Empleados;
 
 use App\Models\Empleado;
 use App\Models\Sucursal;
+use App\Service\Auditoria\AuditoriaService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class EmpleadoService
 {
@@ -47,20 +49,54 @@ class EmpleadoService
     {
         $datos['estado'] ??= 'activo';
 
-        return Empleado::create($datos);
+        $empleado = Empleado::create($datos);
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'crear',
+            'tabla' => 'empleados',
+            'registro_id' => $empleado->id,
+            'datos_nuevos' => $empleado->toArray(),
+        ]);
+
+        return $empleado;
     }
 
     public function actualizar(Empleado $empleado, array $datos): Empleado
     {
-        $empleado->update($datos);
+        $anterior = $empleado->toArray();
 
-        return $empleado->refresh();
+        $empleado->update($datos);
+        $empleado->refresh();
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'actualizar',
+            'tabla' => 'empleados',
+            'registro_id' => $empleado->id,
+            'datos_anteriores' => $anterior,
+            'datos_nuevos' => $empleado->toArray(),
+        ]);
+
+        return $empleado;
     }
 
     public function actualizarEstado(Empleado $empleado, string $estado): Empleado
     {
         if ($empleado->estado !== $estado) {
+            $anterior = $empleado->toArray();
+
             $empleado->update(['estado' => $estado]);
+            $empleado->refresh();
+
+            AuditoriaService::registrar([
+                'empleado_id' => Auth::id(),
+                'accion' => 'actualizar',
+                'tabla' => 'empleados',
+                'registro_id' => $empleado->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $empleado->toArray(),
+            ]);
         }
 
         return $empleado;
@@ -81,7 +117,17 @@ class EmpleadoService
         // por lo que debemos verificar que no sea el último administrador o tenga dependencias críticas.
         // Por ahora seguimos el patrón de Cliente.
 
+        $anterior = $empleado->toArray();
+
         $empleado->delete();
+
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'eliminar',
+            'tabla' => 'empleados',
+            'registro_id' => $empleado->id,
+            'datos_anteriores' => $anterior,
+        ]);
     }
 
     public function sucursalesActivas(): Collection

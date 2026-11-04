@@ -54,24 +54,24 @@ class PerfilRequest extends FormRequest
         $tipoDocumento = is_string($tipoDocumento) ? $tipoDocumento : null;
 
         return [
-            'nombres' => ['required', 'string', 'max:100'],
-            'apellidos' => ['required', 'string', 'max:100'],
-            'tipo_documento' => ['required', Rule::in(['dui', 'pasaporte', 'carnet_residente', 'otro'])],
+            'nombres' => ['nullable', 'string', 'max:100'],
+            'apellidos' => ['nullable', 'string', 'max:100'],
+            'tipo_documento' => ['nullable', Rule::in(['dui', 'pasaporte', 'carnet_residente', 'otro'])],
             'numero_documento' => [
-                'required', 'string', 'max:30',
+                'nullable', 'string', 'max:30',
                 Rule::unique('empleados', 'numero_documento')
                     ->where(fn ($query) => $query->where('tipo_documento', $tipoDocumento))
                     ->ignore($empleadoId),
             ],
             'telefono' => ['nullable', 'string', 'max:25'],
             'email' => [
-                'required', 'email', 'max:150',
+                'nullable', 'email', 'max:150',
                 Rule::unique('empleados', 'email')->ignore($empleadoId),
             ],
-            'cargo' => ['required', 'string', 'max:80'],
-            'sucursal_id' => ['required', 'integer', 'exists:sucursales,id'],
-            'tipo_contrato' => ['required', Rule::in(['indefinido', 'plazo_fijo', 'servicios_profesionales'])],
-            'fecha_ingreso' => ['required', 'date'],
+            'cargo' => ['nullable', 'string', 'max:80'],
+            'sucursal_id' => ['nullable', 'integer', 'exists:sucursales,id'],
+            'tipo_contrato' => ['nullable', Rule::in(['indefinido', 'plazo_fijo', 'servicios_profesionales'])],
+            'fecha_ingreso' => ['nullable', 'date'],
             'fecha_salida' => ['nullable', 'date', 'after_or_equal:fecha_ingreso'],
             'salario_base' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],

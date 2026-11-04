@@ -2,6 +2,7 @@
 
 namespace App\Service\Auth;
 
+use App\Service\Auditoria\AuditoriaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,14 +24,26 @@ class LoginService
 
         Auth::user()?->forceFill(['ultimo_acceso_at' => now()])->save();
 
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'inicio_sesion',
+        ]);
+
         return true;
     }
 
     public function logout(Request $request): void
     {
+        $empleadoId = Auth::id();
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        AuditoriaService::registrar([
+            'empleado_id' => $empleadoId,
+            'accion' => 'cierre_sesion',
+        ]);
     }
 }

@@ -4,8 +4,10 @@ namespace App\Service\Perfil;
 
 use App\Models\Empleado;
 use App\Models\Sucursal;
+use App\Service\Auditoria\AuditoriaService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -15,6 +17,7 @@ class PerfilService
 
     public function actualizar(Empleado $empleado, array $datos, ?UploadedFile $foto = null): Empleado
     {
+        $anterior = $empleado->toArray();
         $eliminarFoto = (bool) ($datos['eliminar_foto'] ?? false);
 
         unset(
@@ -43,8 +46,18 @@ class PerfilService
         }
 
         $empleado->update($datos);
+        $empleado->refresh();
 
-        return $empleado->refresh();
+        AuditoriaService::registrar([
+            'empleado_id' => Auth::id(),
+            'accion' => 'actualizar',
+            'tabla' => 'empleados',
+            'registro_id' => $empleado->id,
+            'datos_anteriores' => $anterior,
+            'datos_nuevos' => $empleado->toArray(),
+        ]);
+
+        return $empleado;
     }
 
     public function sucursales(?int $actualId = null): Collection
