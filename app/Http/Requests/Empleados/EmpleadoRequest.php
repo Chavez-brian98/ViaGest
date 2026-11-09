@@ -18,7 +18,7 @@ class EmpleadoRequest extends FormRequest
         $campos = [
             'codigo', 'nombres', 'apellidos', 'tipo_documento', 'numero_documento',
             'telefono', 'email', 'estado', 'cargo', 'sucursal_id', 'tipo_contrato',
-            'fecha_ingreso', 'fecha_salida', 'salario_base',
+            'fecha_ingreso', 'fecha_salida', 'salario_base', 'rol_id', 'password', 'acceso',
         ];
 
         $datos = [];
@@ -64,7 +64,7 @@ class EmpleadoRequest extends FormRequest
             'nombres' => ['required', 'string', 'max:100'],
             'apellidos' => ['required', 'string', 'max:100'],
             'tipo_documento' => [
-                'nullable', Rule::in(['dui', 'nit', 'carnet_residente', 'otro']),
+                'nullable', Rule::in(['dui', 'pasaporte', 'carnet_residente', 'otro']),
                 'required_with:numero_documento',
             ],
             'numero_documento' => [
@@ -77,6 +77,9 @@ class EmpleadoRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'max:25'],
             'cargo' => ['nullable', 'string', 'max:100'],
             'sucursal_id' => ['required', 'integer', 'exists:sucursales,id'],
+            'rol_id' => ['nullable', 'integer', 'exists:roles,id'],
+            'password' => ['nullable', 'string', 'min:4'],
+            'acceso' => ['nullable', Rule::in(['sin_acceso', 'activo', 'bloqueado'])],
             'tipo_contrato' => ['nullable', 'string', 'max:50'],
             'fecha_ingreso' => ['nullable', 'date', 'before_or_equal:today'],
             'fecha_salida' => ['nullable', 'date', 'after:fecha_ingreso'],

@@ -180,6 +180,30 @@ class RolService
         });
     }
 
+    public function actualizarPermisos(Rol $rol, array $permisos): Rol
+    {
+        if ($rol->esAdministrador()) {
+            throw new DomainException('Los permisos del rol administrador no pueden ser modificados.');
+        }
+
+        return DB::transaction(function () use ($rol, $permisos) {
+            $anterior = ['permisos' => $rol->permisosAgrupados()];
+
+            $this->sincronizarPermisos($rol, $permisos);
+
+            AuditoriaService::registrar([
+                'empleado_id' => Auth::id(),
+                'accion' => 'actualizar',
+                'tabla' => 'roles',
+                'registro_id' => $rol->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => ['permisos' => $rol->permisosAgrupados()],
+            ]);
+
+            return $rol;
+        });
+    }
+
     private function sincronizarPermisos(Rol $rol, array $permisosSeleccionados): void
     {
         DB::table('rol_permisos')->where('rol_id', $rol->id)->delete();

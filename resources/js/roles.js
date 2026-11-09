@@ -233,4 +233,95 @@
             checkboxes.forEach((cb) => (cb.checked = algunDesmarcado));
         });
     });
+
+    // -------------------------------------------------------------
+    // 3. MATRIZ DE PERMISOS DENTRO DEL MODAL (roles.index)
+    // -------------------------------------------------------------
+    document.addEventListener('click', (e) => {
+        // Marcar todo en modal específico
+        const btnMarcarTodoModal = e.target.closest('[data-marcar-todo-modal]');
+        if (btnMarcarTodoModal) {
+            const rolId = btnMarcarTodoModal.dataset.marcarTodoModal;
+            document.querySelectorAll(`.checkbox-modal-rol-${rolId}`).forEach((cb) => (cb.checked = true));
+            return;
+        }
+
+        // Desmarcar todo en modal específico
+        const btnDesmarcarTodoModal = e.target.closest('[data-desmarcar-todo-modal]');
+        if (btnDesmarcarTodoModal) {
+            const rolId = btnDesmarcarTodoModal.dataset.desmarcarTodoModal;
+            document.querySelectorAll(`.checkbox-modal-rol-${rolId}`).forEach((cb) => (cb.checked = false));
+            return;
+        }
+
+        // Marcar columna en modal específico
+        const btnColModal = e.target.closest('[data-columna-modal]');
+        if (btnColModal) {
+            const accion = btnColModal.dataset.columnaModal;
+            const rolId = btnColModal.dataset.modalId;
+            const checkboxes = document.querySelectorAll(`.checkbox-modal-rol-${rolId}[data-accion="${accion}"]`);
+            const algunDesmarcado = Array.from(checkboxes).some((cb) => !cb.checked);
+            checkboxes.forEach((cb) => (cb.checked = algunDesmarcado));
+            return;
+        }
+
+        // Alternar fila en modal específico
+        const btnFilaModal = e.target.closest('[data-fila-modal]');
+        if (btnFilaModal) {
+            const modulo = btnFilaModal.dataset.filaModal;
+            const rolId = btnFilaModal.dataset.modalId;
+            const checkboxes = document.querySelectorAll(`.checkbox-modal-rol-${rolId}[data-modulo="${modulo}"]`);
+            const algunDesmarcado = Array.from(checkboxes).some((cb) => !cb.checked);
+            checkboxes.forEach((cb) => (cb.checked = algunDesmarcado));
+            return;
+        }
+    });
+
+    // Guardar permisos de rol vía AJAX desde el modal
+    document.addEventListener('submit', async (e) => {
+        const formPermisos = e.target.closest('[data-form-permisos-rol]');
+        if (!formPermisos) return;
+
+        e.preventDefault();
+        const submitBtn = formPermisos.querySelector('button[type="submit"]');
+        const rolId = formPermisos.dataset.rolId;
+        const statusSpan = formPermisos.querySelector(`[data-status-guardado-${rolId}]`);
+
+        try {
+            submitBtn?.setAttribute('disabled', 'true');
+            if (submitBtn) submitBtn.textContent = 'Guardando...';
+
+            const formData = new FormData(formPermisos);
+            const res = await fetch(formPermisos.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': formPermisos.querySelector('input[name="_token"]')?.value || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    Accept: 'application/json',
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Error al guardar los permisos.');
+                return;
+            }
+
+            if (statusSpan) {
+                statusSpan.textContent = '¡Permisos guardados con éxito!';
+                statusSpan.classList.add('text-emerald-600', 'font-semibold');
+                setTimeout(() => {
+                    statusSpan.textContent = 'Total módulos: 21';
+                    statusSpan.classList.remove('text-emerald-600', 'font-semibold');
+                }, 3000);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Ocurrió un error inesperado al guardar los permisos.');
+        } finally {
+            submitBtn?.removeAttribute('disabled');
+            if (submitBtn) submitBtn.textContent = 'Guardar cambios';
+        }
+    });
 })();

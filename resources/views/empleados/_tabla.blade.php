@@ -7,6 +7,7 @@
         'otro' => 'Otro',
     ];
     $mostrar = fn ($valor) => filled($valor) ? $valor : '—';
+    $puedeGestionarPermisos = auth()->user()?->tienePermiso('roles_permisos', 'ver') ?? false;
 @endphp
 
 <table class="w-full min-w-[46rem] text-sm">
@@ -85,6 +86,20 @@
                 </td>
                 <td class="whitespace-nowrap px-5 py-3">
                     <div class="flex items-center justify-end gap-1">
+                        @if ($puedeGestionarPermisos)
+                            <button
+                                type="button"
+                                data-modal-open="empleado-permisos-{{ $empleado->id }}"
+                                title="Gestionar permisos específicos"
+                                aria-label="Gestionar permisos específicos de {{ $empleado->nombreCompleto() }}"
+                                class="flex h-8 w-8 items-center justify-center rounded-lg text-ink/45 transition hover:bg-secondary/10 hover:text-primary focus:outline-none focus:ring-2 focus:ring-secondary/40"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                            </button>
+                        @endif
+
                         <button
                             type="button"
                             data-modal-open="empleado-detalle-{{ $empleado->id }}"
@@ -264,4 +279,8 @@
             </a>
         </div>
     </dialog>
+
+    @if ($puedeGestionarPermisos)
+        @include('empleados._permisos_dialog', ['empleado' => $empleado])
+    @endif
 @endforeach

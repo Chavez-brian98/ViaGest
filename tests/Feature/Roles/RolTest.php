@@ -317,4 +317,114 @@ class RolTest extends TestCase
             'estado' => 'inactivo',
         ]);
     }
+
+    public function test_can_update_role_permissions_directly_via_modal_endpoint(): void
+    {
+        $rol = Rol::create([
+            'nombre' => 'operador',
+            'alcance' => 'propia_sucursal',
+            'estado' => 'activo',
+        ]);
+
+        $response = $this->actingAs($this->admin)->patchJson(route('roles.permisos.update', $rol), [
+            'permisos' => [
+                'paquetes' => ['ver', 'crear'],
+                'guias' => ['ver'],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('mensaje', 'Permisos del rol "operador" actualizados correctamente.');
+
+        $this->assertDatabaseHas('rol_permisos', [
+            'rol_id' => $rol->id,
+            'modulo' => 'paquetes',
+            'accion' => 'crear',
+        ]);
+
+        $this->assertDatabaseHas('rol_permisos', [
+            'rol_id' => $rol->id,
+            'modulo' => 'guias',
+            'accion' => 'ver',
+        ]);
+    }
+
+    public function test_employee_inherits_role_permissions_by_default(): void
+    {
+        DB::table('rol_permisos')->insert([
+            'rol_id' => $this->rolVendedor->id,
+            'modulo' => 'clientes',
+            'accion' => 'ver',
+        ]);
+
+        $this->assertTrue($this->vendedor->tienePermiso('clientes', 'ver'));
+        $this->assertFalse($this->vendedor->tienePermiso('clientes', 'eliminar'));
+    }
+
+    public function test_employee_permission_override_grants_access(): void
+    {
+        // Rol vendedor NO tiene permiso de ver empleados
+        $this->assertFalse($this->vendedor->tienePermiso('empleados', 'ver'));
+
+        // Conceder override específico al empleado
+        $this->actingAs($this->admin)->patchJson(route('empleados.permisos.update', $this->vendedor), [
+            'permisos' => [
+                'empleados' => ['ver' => 'permitir'],
+            ],
+        ])->assertOk();
+
+        // Ahora sí tiene permiso
+        $this->assertTrue($this->vendedor->fresh()->tienePermiso('empleados', 'ver'));
+    }
+
+    public function test_employee_permission_override_denies_access_even_if_role_has_it(): void
+    {
+        // Rol vendedor sí tiene clientes:ver
+        DB::table('rol_permisos')->insert([
+            'rol_id' => $this->rolVendedor->id,
+            'modulo' => 'clientes',
+            'accion' => 'ver',
+        ]);
+        $this->assertTrue($this->vendedor->tienePermiso('clientes', 'ver'));
+
+        // Denegar específicamente para este empleado
+        $this->actingAs($this->admin)->patchJson(route('empleados.permisos.update', $this->vendedor), [
+            'permisos' => [
+                'clientes' => ['ver' => 'denegar'],
+            ],
+        ])->assertOk();
+
+        // Ahora está bloqueado
+        $this->assertFalse($this->vendedor->fresh()->tienePermiso('clientes', 'ver'));
+    }
+
+    public function test_administrator_permissions_cannot_be_overridden(): void
+    {
+        $this->actingAs($this->admin)
+            ->patchJson(route('empleados.permisos.update', $this->admin), [
+                'permisos' => [
+                    'clientes' => ['ver' => 'denegar'],
+                ],
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('empleado_permisos', [
+            'empleado_id' => $this->admin->id,
+        ]);
+    }
+
+    public function test_employee_without_permission_cannot_manage_overrides(): void
+    {
+        $this->actingAs($this->vendedor)
+            ->patchJson(route('empleados.permisos.update', $this->vendedor), [
+                'permisos' => [
+                    'empleados' => ['ver' => 'permitir'],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('empleado_permisos', [
+            'empleado_id' => $this->vendedor->id,
+        ]);
+    }
 }

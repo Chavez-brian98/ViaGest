@@ -72,6 +72,22 @@ class Empleado extends Authenticatable
             return true;
         }
 
+        // 1. Verificar si existe sobreescritura específica para el empleado
+        $override = DB::table('empleado_permisos')
+            ->where('empleado_id', $this->id)
+            ->where('modulo', $modulo)
+            ->where('accion', $accion)
+            ->value('efecto');
+
+        if ($override === 'denegar') {
+            return false;
+        }
+
+        if ($override === 'permitir') {
+            return true;
+        }
+
+        // 2. Si no hay override para esta acción, hereda del rol
         if (! $this->rol_id) {
             return false;
         }
@@ -81,5 +97,23 @@ class Empleado extends Authenticatable
             ->where('modulo', $modulo)
             ->where('accion', $accion)
             ->exists();
+    }
+
+    /**
+     * Devuelve los overrides de permisos del empleado en formato:
+     * [modulo => [accion => 'permitir'|'denegar']]
+     */
+    public function overridesPermisos(): array
+    {
+        $filas = DB::table('empleado_permisos')
+            ->where('empleado_id', $this->id)
+            ->get();
+
+        $overrides = [];
+        foreach ($filas as $fila) {
+            $overrides[$fila->modulo][$fila->accion] = $fila->efecto;
+        }
+
+        return $overrides;
     }
 }

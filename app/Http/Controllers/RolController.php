@@ -73,16 +73,6 @@ class RolController extends Controller
             ->with('success', "Rol \"{$rol->nombre}\" creado correctamente.");
     }
 
-    public function edit(Rol $role): View
-    {
-        return view('roles.edit', [
-            'rol' => $role,
-            'permisosSeleccionados' => $role->permisosAgrupados(),
-            'modulosEtiquetas' => RolService::MODULOS_ETIQUETAS,
-            'acciones' => RolService::ACCIONES,
-        ]);
-    }
-
     public function update(RolRequest $request, Rol $role): RedirectResponse
     {
         $this->rolService->actualizar($role, $request->validated());
@@ -113,6 +103,32 @@ class RolController extends Controller
             return response()->json([
                 'estado' => $rol->estado,
                 'mensaje' => $mensaje,
+            ]);
+        }
+
+        return $this->volverAlListado($request)->with('success', $mensaje);
+    }
+
+    public function actualizarPermisos(Request $request, Rol $role): RedirectResponse|JsonResponse
+    {
+        $permisos = $request->input('permisos', []);
+
+        try {
+            $this->rolService->actualizarPermisos($role, is_array($permisos) ? $permisos : []);
+        } catch (DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
+
+            return $this->volverAlListado($request)->with('error', $e->getMessage());
+        }
+
+        $mensaje = "Permisos del rol \"{$role->nombre}\" actualizados correctamente.";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'mensaje' => $mensaje,
+                'permisos' => $role->permisosAgrupados(),
             ]);
         }
 

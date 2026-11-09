@@ -39,13 +39,22 @@ Route::middleware('auth')->group(function () {
         ->name('empleados.deshabilitar');
 
     Route::patch('/roles/{role}/estado', [RolController::class, 'actualizarEstado'])
+        ->middleware('permiso:roles_permisos,ver')
         ->name('roles.estado');
+
+    Route::patch('/roles/{role}/permisos', [RolController::class, 'actualizarPermisos'])
+        ->middleware('permiso:roles_permisos,ver')
+        ->name('roles.permisos.update');
+
+    Route::patch('/empleados/{empleado}/permisos', [EmpleadoController::class, 'actualizarPermisos'])
+        ->middleware('permiso:roles_permisos,ver')
+        ->name('empleados.permisos.update');
 
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::resource('empleados', EmpleadoController::class)->except(['show']);
 
     Route::middleware('permiso:roles_permisos,ver')->group(function () {
-        Route::resource('roles', RolController::class)->except(['show']);
+        Route::resource('roles', RolController::class)->except(['show', 'edit']);
     });
 
     Route::resource('proveedores', ProveedorController::class)->except(['show'])->parameters(['proveedores' => 'proveedor']);

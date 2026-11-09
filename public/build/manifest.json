@@ -32,7 +32,7 @@
     "name": "sweetalert2.all"
   },
   "resources/css/app.css": {
-    "file": "assets/app-yYpLP1d4.css",
+    "file": "assets/app-DxBiuIBz.css",
     "name": "app",
     "names": [
       "app.css"
@@ -68,7 +68,7 @@
     "isEntry": true
   },
   "resources/js/empleados.js": {
-    "file": "assets/empleados-CIEYDV21.js",
+    "file": "assets/empleados-CDG9SCXg.js",
     "name": "empleados",
     "src": "resources/js/empleados.js",
     "isEntry": true
@@ -83,7 +83,7 @@
     ]
   },
   "resources/js/roles.js": {
-    "file": "assets/roles-CJ_BqJJb.js",
+    "file": "assets/roles-Wx-V6aLO.js",
     "name": "roles",
     "src": "resources/js/roles.js",
     "isEntry": true

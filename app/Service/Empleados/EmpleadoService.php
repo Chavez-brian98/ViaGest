@@ -3,13 +3,16 @@
 namespace App\Service\Empleados;
 
 use App\Models\Empleado;
+use App\Models\Rol;
 use App\Models\Sucursal;
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Roles\RolService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class EmpleadoService
 {
@@ -22,7 +25,7 @@ class EmpleadoService
         $sucursalId = (string) ($filtros['sucursal_id'] ?? '');
 
         return Empleado::query()
-            ->with('sucursal')
+            ->with(['sucursal', 'rol'])
             ->when($buscar !== '', function (Builder $query) use ($buscar): void {
                 $like = '%'.$buscar.'%';
 
@@ -48,6 +51,11 @@ class EmpleadoService
     public function crear(array $datos): Empleado
     {
         $datos['estado'] ??= 'activo';
+        if (empty($datos['password'])) {
+            unset($datos['password']);
+        } else {
+            $datos['acceso'] ??= 'activo';
+        }
 
         $empleado = Empleado::create($datos);
 
@@ -65,6 +73,10 @@ class EmpleadoService
     public function actualizar(Empleado $empleado, array $datos): Empleado
     {
         $anterior = $empleado->toArray();
+
+        if (empty($datos['password'])) {
+            unset($datos['password']);
+        }
 
         $empleado->update($datos);
         $empleado->refresh();
@@ -107,6 +119,55 @@ class EmpleadoService
         $this->actualizarEstado($empleado, 'inactivo');
     }
 
+    public function actualizarPermisos(Empleado $empleado, array $overrides): Empleado
+    {
+        if ($empleado->esAdministrador()) {
+            throw new DomainException('No se pueden sobrescribir permisos para el administrador principal.');
+        }
+
+        return DB::transaction(function () use ($empleado, $overrides) {
+            $anterior = ['overrides' => $empleado->overridesPermisos()];
+
+            DB::table('empleado_permisos')->where('empleado_id', $empleado->id)->delete();
+
+            $modulosValidos = array_keys(RolService::MODULOS_ETIQUETAS);
+            $accionesValidas = RolService::ACCIONES;
+
+            $rows = [];
+            foreach ($overrides as $modulo => $acciones) {
+                if (! in_array($modulo, $modulosValidos, true) || ! is_array($acciones)) {
+                    continue;
+                }
+
+                foreach ($acciones as $accion => $efecto) {
+                    if (in_array($accion, $accionesValidas, true) && in_array($efecto, ['permitir', 'denegar'], true)) {
+                        $rows[] = [
+                            'empleado_id' => $empleado->id,
+                            'modulo' => $modulo,
+                            'accion' => $accion,
+                            'efecto' => $efecto,
+                        ];
+                    }
+                }
+            }
+
+            if (! empty($rows)) {
+                DB::table('empleado_permisos')->insertOrIgnore($rows);
+            }
+
+            AuditoriaService::registrar([
+                'empleado_id' => Auth::id(),
+                'accion' => 'actualizar',
+                'tabla' => 'empleado_permisos',
+                'registro_id' => $empleado->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => ['overrides' => $empleado->overridesPermisos()],
+            ]);
+
+            return $empleado;
+        });
+    }
+
     public function eliminar(Empleado $empleado): void
     {
         if ($empleado->estado !== 'inactivo') {
@@ -134,6 +195,14 @@ class EmpleadoService
     {
         return Sucursal::query()
             ->where('estado', 'activa')
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public function rolesActivos(): Collection
+    {
+        return Rol::query()
+            ->where('estado', 'activo')
             ->orderBy('nombre')
             ->get();
     }
