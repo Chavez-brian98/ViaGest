@@ -8,9 +8,23 @@ if (sidebar) {
 
     const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
 
-    if (localStorage.getItem(storageKey) === '1') {
+    const updateToggleLabel = (collapsed) => {
+        if (!collapseBtn) {
+            return;
+        }
+
+        const label = collapsed ? 'Expandir menu' : 'Colapsar menu';
+        collapseBtn.setAttribute('aria-label', label);
+        collapseBtn.setAttribute('title', label);
+    };
+
+    const collapsedInicial = localStorage.getItem(storageKey) === '1';
+
+    if (collapsedInicial) {
         sidebar.classList.add('is-collapsed');
     }
+
+    updateToggleLabel(collapsedInicial);
 
     const openDrawer = () => {
         sidebar.classList.add('is-open');
@@ -25,6 +39,7 @@ if (sidebar) {
     collapseBtn?.addEventListener('click', () => {
         const collapsed = sidebar.classList.toggle('is-collapsed');
         localStorage.setItem(storageKey, collapsed ? '1' : '0');
+        updateToggleLabel(collapsed);
     });
 
     openBtn?.addEventListener('click', openDrawer);

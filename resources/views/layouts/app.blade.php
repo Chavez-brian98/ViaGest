@@ -50,7 +50,7 @@
 
         <div class="flex h-screen overflow-hidden">
             <aside id="appSidebar" class="app-sidebar flex flex-col border-r border-ink/10 bg-surface">
-                <div class="flex h-16 shrink-0 items-center gap-3 border-b border-ink/10 px-4">
+                <div class="sidebar-header relative flex h-16 shrink-0 items-center gap-3 border-b border-ink/10 px-4">
                     @if ($logoUrl)
                         <img
                             src="{{ $logoUrl }}"

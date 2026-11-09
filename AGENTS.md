@@ -30,8 +30,8 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 
 ## Entorno (bloqueante en esta maquina)
 
-- No hay `.env` en el repo (gitignored). El `.env` local actual apunta a MySQL en Docker: contenedor `mybdd`, base `Viagest`, usuario `root`, clave `1234`, host `127.0.0.1:3306`. Docker Desktop debe estar corriendo y publicar el puerto 3306; si aparece `SQLSTATE[HY000] [2002] Connection refused`, revisa `docker ps`/mapeo de puertos o valida el servidor con `docker exec mybdd mysql -uroot -p1234 -e "SELECT 1;"`.
-- PHP: el PATH puede resolver al PHP de XAMPP (`8.2`, inservible porque el proyecto exige `^8.3`). Verifica `php -v`; si no es 8.3+, antepon el PHP 8.4.16: `$env:PATH = "C:\php;$env:PATH"` antes de `composer`/`php`.
+- No hay `.env` en el repo (gitignored). El `.env` local actual apunta a MySQL en Docker: contenedor `mybdd`, base `ViaGest`, usuario `root`, clave `1234`, host `127.0.0.1:3306`. Docker Desktop debe estar corriendo y publicar el puerto 3306; si aparece `SQLSTATE[HY000] [2002] Connection refused`, revisa `docker ps`/mapeo de puertos o valida el servidor con `docker exec mybdd mysql -uroot -p1234 -e "SELECT 1;"`.
+- PHP: el proyecto exige `^8.3`. Verifica `php -v` (en esta maquina resuelve a `C:\php-8.4.23\php.exe`); si el PATH apunta a un PHP anterior (p.ej. el 8.2 de XAMPP), antepon un PHP 8.3+ al PATH antes de `composer`/`php`.
 - Para un entorno desde cero: `Copy-Item .env.example .env`, `php artisan key:generate`, crear `database/database.sqlite` (no existe) y `php artisan migrate --seed`. `.env.example` es sqlite con `DB_DATABASE` comentado, por lo que el default es `database/database.sqlite`; el conector sqlite **lanza excepcion si el archivo no existe**, asi que `composer setup` falla en `migrate` si no lo creas antes.
 - Los tests **requieren `APP_KEY`**: sin `.env`/key fallan con "No application encryption key has been specified". `phpunit.xml` fuerza `DB_CONNECTION=sqlite` + `DB_DATABASE=:memory:`; los tests no tocan tu BD real.
 - Produccion: MySQL 8.0.16+. No agregues SQL/funciones exclusivas de MySQL en tests o migraciones.
@@ -40,7 +40,7 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 
 - Instalar: `composer install`, `npm install`, `php artisan storage:link`.
 - BD: `php artisan migrate --seed` (o `migrate:fresh --seed`).
-- Tests: `composer test` (limpia config y corre la suite; hoy 101 tests en verde). Un test: `php artisan test --filter=<nombre>`.
+- Tests: `composer test` (limpia config y corre la suite; hoy 109 tests en verde). Un test: `php artisan test --filter=<nombre>`.
 - Formato: `vendor\bin\pint` en archivos tocados (`--test` solo verifica). No hay `pint.json`: corre con defaults.
 - Frontend: `npm run dev`, `npm run build`. **No hay** linter/formatter/typecheck JS ni CI (`.github` no existe).
 - `composer dev` = `php artisan dev` (sirve el stack completo).
@@ -68,7 +68,7 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 ## Tests
 
 - Feature tests por modulo en `tests/Feature/<Modulo>/`; usan `RefreshDatabase` y `$this->withoutVite()` en `setUp`. `tests/TestCase.php` limpia el cache estatico de `ConfiguracionService` en cada test.
-- No existe `database/factories` (aunque composer declare el namespace): no hay `factory()`. Arma fixtures con `DB::table(...)->insertGetId(...)` en `ciudades`/`sucursales`/`roles` y luego `Model::create()` (patron de `LoginTest`/`RolTest`). Respeta los NOT NULL y unicos reales: `empleados` exige `codigo`, `nombres`, `apellidos`, `sucursal_id`, `cargo`, `fecha_ingreso` y unicidad de `email` y `(tipo_documento, numero_documento)`.
+- `database/factories` esta vacio (aunque composer declare el namespace): no hay `factory()`. Arma fixtures con `DB::table(...)->insertGetId(...)` en `ciudades`/`sucursales`/`roles` y luego `Model::create()` (patron de `LoginTest`/`RolTest`). Respeta los NOT NULL y unicos reales: `empleados` exige `codigo`, `nombres`, `apellidos`, `sucursal_id`, `cargo`, `fecha_ingreso` y unicidad de `email` y `(tipo_documento, numero_documento)`.
 - El bypass de permisos depende de que el rol se llame exactamente `administrador`; los tests crean ese rol a mano. Verifica tambien filas en `bitacora_auditoria` cuando toques Services.
 
 ## Estandares (obligatorios)

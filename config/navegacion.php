@@ -14,10 +14,10 @@ return [
         [
             'titulo' => 'Catalogo',
             'items' => [
-                ['label' => 'Paquetes', 'icono' => 'cube', 'ruta' => null],
+                ['label' => 'Paquetes', 'icono' => 'cube', 'ruta' => 'paquetes.index'],
                 ['label' => 'Servicios', 'icono' => 'globe', 'ruta' => 'servicios.index'],
                 ['label' => 'Proveedores', 'icono' => 'building', 'ruta' => 'proveedores.index'],
-                ['label' => 'Cupos', 'icono' => 'calendar', 'ruta' => null],
+                ['label' => 'Cupos', 'icono' => 'calendar', 'ruta' => 'cupos.index'],
             ],
         ],
         [

@@ -4,8 +4,10 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\auth\LoginController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\CupoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpleadoController;
+use App\Http\Controllers\PaqueteController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\RolController;
@@ -66,11 +68,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('roles', RolController::class)->except(['show', 'edit']);
     });
 
+    Route::get('paquetes/buscar-servicios', [PaqueteController::class, 'buscarServicios'])->name('paquetes.buscar-servicios');
+    Route::resource('paquetes', PaqueteController::class)->except(['show'])->parameters(['paquetes' => 'paquete']);
+    Route::patch('paquetes/{paquete}/estado', [PaqueteController::class, 'actualizarEstado'])->name('paquetes.estado');
+
     Route::resource('proveedores', ProveedorController::class)->except(['show'])->parameters(['proveedores' => 'proveedor']);
     Route::patch('proveedores/{proveedor}/estado', [ProveedorController::class, 'actualizarEstado'])->name('proveedores.estado');
 
     Route::resource('servicios', ServicioController::class)->except(['show'])->parameters(['servicios' => 'servicio']);
     Route::patch('servicios/{servicio}/estado', [ServicioController::class, 'actualizarEstado'])->name('servicios.estado');
+
+    Route::resource('cupos', CupoController::class)->except(['show'])->parameters(['cupos' => 'cupo']);
+    Route::patch('cupos/{cupo}/estado', [CupoController::class, 'actualizarEstado'])->name('cupos.estado');
 
     Route::middleware('es_administrador')->group(function () {
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria.index');

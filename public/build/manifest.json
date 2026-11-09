@@ -32,7 +32,7 @@
     "name": "sweetalert2.all"
   },
   "resources/css/app.css": {
-    "file": "assets/app-C22xxJOz.css",
+    "file": "assets/app-BlpvsAi4.css",
     "name": "app",
     "names": [
       "app.css"
@@ -41,7 +41,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CZn_2jNf.js",
+    "file": "assets/app-DzPrh2OR.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
@@ -67,6 +67,15 @@
     "src": "resources/js/configuracion.js",
     "isEntry": true
   },
+  "resources/js/cupos.js": {
+    "file": "assets/cupos-BrRT6Od-.js",
+    "name": "cupos",
+    "src": "resources/js/cupos.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.all-B4ZjFHUr.js"
+    ]
+  },
   "resources/js/dashboard.js": {
     "file": "assets/dashboard-BAYQC5MY.js",
     "name": "dashboard",
@@ -78,6 +87,15 @@
     "name": "empleados",
     "src": "resources/js/empleados.js",
     "isEntry": true
+  },
+  "resources/js/paquetes.js": {
+    "file": "assets/paquetes-1BR6h4qO.js",
+    "name": "paquetes",
+    "src": "resources/js/paquetes.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.all-B4ZjFHUr.js"
+    ]
   },
   "resources/js/proveedores.js": {
     "file": "assets/proveedores-BnWl0x5b.js",
