@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\auth\LoginController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\PerfilController;
@@ -25,6 +26,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/perfil', [PerfilController::class, 'edit'])->name('perfil.edit');
     Route::put('/perfil', [PerfilController::class, 'update'])->name('perfil.update');
+
+    Route::get('/configuracion', [ConfiguracionController::class, 'edit'])
+        ->middleware('permiso:ajustes_generales,ver')
+        ->name('configuracion.edit');
+
+    Route::put('/configuracion', [ConfiguracionController::class, 'update'])
+        ->middleware('permiso:ajustes_generales,editar')
+        ->name('configuracion.update');
 
     Route::patch('/clientes/{cliente}/estado', [ClienteController::class, 'actualizarEstado'])
         ->name('clientes.estado');

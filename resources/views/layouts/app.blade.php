@@ -4,10 +4,20 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>@yield('titulo', 'Dashboard') | ViaGest</title>
+        <title>@yield('titulo', 'Dashboard') | {{ $configuracion->nombre_comercial ?? 'ViaGest' }}</title>
 
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>
+            :root {
+                --color-primary: {{ $coloresSistema['primary'] }};
+                --color-secondary: {{ $coloresSistema['secondary'] }};
+                --color-accent: {{ $coloresSistema['accent'] }};
+                --color-background: {{ $coloresSistema['background'] }};
+                --color-surface: {{ $coloresSistema['surface'] }};
+                --color-ink: {{ $coloresSistema['ink'] }};
+            }
+        </style>
         @stack('head')
     </head>
         <body class="h-screen overflow-hidden bg-background font-sans text-ink antialiased">
@@ -41,12 +51,20 @@
         <div class="flex h-screen overflow-hidden">
             <aside id="appSidebar" class="app-sidebar flex flex-col border-r border-ink/10 bg-surface">
                 <div class="flex h-16 shrink-0 items-center gap-3 border-b border-ink/10 px-4">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-white shadow-lg shadow-primary/30">
-                        VG
-                    </div>
+                    @if ($logoUrl)
+                        <img
+                            src="{{ $logoUrl }}"
+                            alt="Logo de {{ $configuracion->nombre_comercial }}"
+                            class="h-10 w-10 shrink-0 rounded-2xl bg-white object-contain p-1 shadow-lg shadow-primary/30"
+                        >
+                    @else
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-white shadow-lg shadow-primary/30">
+                            {{ $inicialesMarca }}
+                        </div>
+                    @endif
                     <div class="sidebar-text min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold text-ink">ViaGest</p>
-                        <p class="truncate text-xs text-ink/45">Agencia de viajes</p>
+                        <p class="truncate text-sm font-semibold text-ink">{{ $configuracion->nombre_comercial }}</p>
+                        <p class="truncate text-xs text-ink/45">{{ $configuracion->razon_social ?: 'Agencia de viajes' }}</p>
                     </div>
                     <button
                         type="button"
@@ -69,6 +87,10 @@
                             </p>
                             @foreach ($grupo['items'] as $item)
                                 @php
+                                    $permisoItem = $item['permiso'] ?? null;
+                                    $puedeVerItem = $permisoItem === null
+                                        || ($usuario?->tienePermiso($permisoItem[0], $permisoItem[1] ?? 'ver') ?? false);
+
                                     $disponible = ! empty($item['ruta']);
                                     $activo = $disponible && request()->routeIs($item['ruta']);
 
@@ -83,6 +105,7 @@
                                         $claseIcono = 'text-ink/25';
                                     }
                                 @endphp
+                                @if ($puedeVerItem)
                                 <a
                                     href="{{ $disponible ? route($item['ruta']) : '#' }}"
                                     title="{{ $item['label'] }}{{ ! $disponible ? ' (Próximamente)' : '' }}"
@@ -102,6 +125,7 @@
                                         </span>
                                     @endif
                                 </a>
+                                @endif
                             @endforeach
                         </div>
                     @endforeach

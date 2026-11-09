@@ -101,6 +101,7 @@ class AuditoriaService
         return match ($tabla) {
             'clientes' => 'Clientes',
             'empleados' => 'Empleados',
+            'configuracion_empresa' => 'Configuración',
             null => 'Sesión',
             default => ucfirst(str_replace('_', ' ', (string) $tabla)),
         };

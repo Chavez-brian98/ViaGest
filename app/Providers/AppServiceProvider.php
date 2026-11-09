@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Service\Configuracion\ConfiguracionService;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        View::composer(['layouts.app', 'auth.login'], function ($view): void {
+            $configuracion = ConfiguracionService::actual();
+
+            $view->with([
+                'configuracion' => $configuracion,
+                'logoUrl' => ConfiguracionService::logoUrl(),
+                'coloresSistema' => ConfiguracionService::colores(),
+                'inicialesMarca' => ConfiguracionService::iniciales(),
+            ]);
+        });
     }
 }

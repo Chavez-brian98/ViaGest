@@ -5,6 +5,22 @@
     $overrides = $empleado->overridesPermisos();
     $modulosEtiquetas = \App\Service\Roles\RolService::MODULOS_ETIQUETAS;
     $todasAcciones = \App\Service\Roles\RolService::ACCIONES;
+
+    $totalRol = 0;
+    $totalEfectivo = 0;
+
+    foreach ($modulosEtiquetas as $claveModulo => $_) {
+        $accionesRol = $permisosRol[$claveModulo] ?? [];
+
+        foreach ($todasAcciones as $accion) {
+            $otorgaRol = in_array($accion, $accionesRol, true);
+            $override = $overrides[$claveModulo][$accion] ?? null;
+            $efectivo = $override === 'permitir' || ($override !== 'denegar' && $otorgaRol);
+
+            $totalRol += $otorgaRol ? 1 : 0;
+            $totalEfectivo += $efectivo ? 1 : 0;
+        }
+    }
 @endphp
 
 <dialog
@@ -43,7 +59,7 @@
                     @endif
                 </div>
                 <p class="text-xs text-ink/50 mt-1">
-                    Sobrepón permisos al rol del empleado: puedes otorgar permisos adicionales (Verde) o revocar permisos que otorga su rol (Rojo).
+                    Revisa el permiso que otorga el rol y el permiso efectivo del empleado. Puedes conceder permisos adicionales (verde) o revocar los que otorga su rol (rojo).
                 </p>
             </div>
             <button
@@ -65,15 +81,18 @@
                 </div>
             @else
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-background/60 p-3 rounded-xl border border-ink/10 text-xs">
-                    <div class="flex items-center gap-4">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                         <span class="inline-flex items-center gap-1.5 text-ink/60">
-                            <span class="h-2 w-2 rounded-full bg-slate-300"></span> Heredado del Rol
+                            <span class="rounded bg-secondary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Rol ✓</span>
+                            Lo otorga el rol
                         </span>
                         <span class="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Concedido (+)
+                            <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">Emp ✓</span>
+                            Permiso efectivo
                         </span>
                         <span class="inline-flex items-center gap-1.5 text-rose-700 font-medium">
-                            <span class="h-2 w-2 rounded-full bg-rose-500"></span> Revocado (-)
+                            <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">Emp ✗</span>
+                            Denegado al empleado
                         </span>
                     </div>
 
@@ -110,22 +129,41 @@
                                         @php
                                             $rolOtorga = in_array($acc, $accionesEnRol, true);
                                             $overrideActual = $overrides[$claveModulo][$acc] ?? null; // 'permitir', 'denegar' o null
+                                            $efectivo = $overrideActual === 'permitir' || ($overrideActual !== 'denegar' && $rolOtorga);
                                         @endphp
-                                        <td class="px-2 py-1.5 text-center">
-                                            <select
-                                                name="permisos[{{ $claveModulo }}][{{ $acc }}]"
-                                                class="rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-{{ $empleado->id }} @if($overrideActual === 'permitir') border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold @elseif($overrideActual === 'denegar') border-rose-300 bg-rose-50 text-rose-800 font-semibold @else border-ink/15 bg-surface text-ink/70 @endif"
-                                            >
-                                                <option value="" @selected(is_null($overrideActual))>
-                                                    Rol ({{ $rolOtorga ? 'Sí' : 'No' }})
-                                                </option>
-                                                <option value="permitir" @selected($overrideActual === 'permitir') class="text-emerald-700 font-semibold">
-                                                    ✓ Conceder
-                                                </option>
-                                                <option value="denegar" @selected($overrideActual === 'denegar') class="text-rose-700 font-semibold">
-                                                    ✕ Denegar
-                                                </option>
-                                            </select>
+                                        <td class="px-2 py-1.5 text-center align-top">
+                                            <div class="flex flex-col items-center gap-1">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <span
+                                                        class="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold {{ $rolOtorga ? 'bg-secondary/15 text-primary' : 'bg-slate-100 text-slate-500' }}"
+                                                        title="Permiso que otorga el rol"
+                                                    >
+                                                        Rol {{ $rolOtorga ? '✓' : '✗' }}
+                                                    </span>
+                                                    <span
+                                                        data-permiso-efectivo
+                                                        class="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold {{ $efectivo ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}"
+                                                        title="Permiso efectivo del empleado"
+                                                    >
+                                                        Emp {{ $efectivo ? '✓' : '✗' }}
+                                                    </span>
+                                                </div>
+                                                <select
+                                                    name="permisos[{{ $claveModulo }}][{{ $acc }}]"
+                                                    data-rol-otorga="{{ $rolOtorga ? '1' : '0' }}"
+                                                    class="rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-{{ $empleado->id }} @if($overrideActual === 'permitir') border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold @elseif($overrideActual === 'denegar') border-rose-300 bg-rose-50 text-rose-800 font-semibold @else border-ink/15 bg-surface text-ink/70 @endif"
+                                                >
+                                                    <option value="" @selected(is_null($overrideActual))>
+                                                        Heredar del rol
+                                                    </option>
+                                                    <option value="permitir" @selected($overrideActual === 'permitir') class="text-emerald-700 font-semibold">
+                                                        ✓ Conceder
+                                                    </option>
+                                                    <option value="denegar" @selected($overrideActual === 'denegar') class="text-rose-700 font-semibold">
+                                                        ✕ Denegar
+                                                    </option>
+                                                </select>
+                                            </div>
                                         </td>
                                     @endforeach
                                 </tr>
@@ -136,10 +174,18 @@
             @endif
         </div>
 
-        <div class="flex items-center justify-between border-t border-ink/10 px-6 py-4 bg-background/30">
-            <span class="text-xs text-ink/50" data-status-empleado-{{ $empleado->id }}>
-                Total módulos: {{ count($modulosEtiquetas) }}
-            </span>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 px-6 py-4 bg-background/30">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink/50">
+                <span data-status-empleado-{{ $empleado->id }}>
+                    Total módulos: {{ count($modulosEtiquetas) }}
+                </span>
+                @if (! $esAdmin)
+                    <span>
+                        Rol: <strong data-total-rol-{{ $empleado->id }}>{{ $totalRol }}</strong> ·
+                        Empleado: <strong data-total-efectivo-{{ $empleado->id }}>{{ $totalEfectivo }}</strong>
+                    </span>
+                @endif
+            </div>
             <div class="flex items-center gap-2">
                 <button
                     type="button"

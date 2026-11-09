@@ -43,7 +43,7 @@ return [
                 ['label' => 'Roles y permisos', 'icono' => 'lock', 'ruta' => 'roles.index'],
                 ['label' => 'Sucursales', 'icono' => 'map', 'ruta' => null],
                 ['label' => 'Auditoría', 'icono' => 'shield', 'ruta' => 'auditoria.index'],
-                ['label' => 'Configuracion', 'icono' => 'cog', 'ruta' => null],
+                ['label' => 'Configuración', 'icono' => 'cog', 'ruta' => 'configuracion.edit', 'permiso' => ['ajustes_generales', 'ver']],
             ],
         ],
     ],

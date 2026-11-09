@@ -38,7 +38,7 @@ class RolService
         'notificaciones' => 'Notificaciones',
     ];
 
-    public const ACCIONES = ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'aprobar'];
+    public const ACCIONES = ['ver', 'crear', 'editar', 'eliminar'];
 
     public function listar(?string $buscar = null, array $filtros = []): LengthAwarePaginator
     {

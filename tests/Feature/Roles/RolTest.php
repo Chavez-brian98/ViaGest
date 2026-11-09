@@ -149,7 +149,7 @@ class RolTest extends TestCase
             'estado' => 'activo',
             'permisos' => [
                 'clientes' => ['ver', 'crear', 'editar'],
-                'reportes' => ['ver', 'exportar'],
+                'reportes' => ['ver', 'editar'],
             ],
         ]);
 
@@ -168,7 +168,7 @@ class RolTest extends TestCase
         $this->assertDatabaseHas('rol_permisos', [
             'rol_id' => $rol->id,
             'modulo' => 'reportes',
-            'accion' => 'exportar',
+            'accion' => 'editar',
         ]);
 
         // Verifica que se registró en Auditoría

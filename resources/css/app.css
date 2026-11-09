@@ -129,7 +129,7 @@ input:checked + .estado-form-switch {
 
 .estado-switch:focus-visible,
 input:focus-visible + .estado-form-switch {
-    outline: 3px solid rgb(28 163 170 / 0.35);
+    outline: 3px solid color-mix(in srgb, var(--color-secondary) 35%, transparent);
     outline-offset: 2px;
 }
 

@@ -153,6 +153,41 @@
             }
         });
 
+        const actualizarPermisoEfectivo = (sel) => {
+            const badge = sel.closest('td')?.querySelector('[data-permiso-efectivo]');
+            if (!badge) return;
+
+            const rolOtorga = sel.dataset.rolOtorga === '1';
+            const efectivo = sel.value === 'permitir' ? true : sel.value === 'denegar' ? false : rolOtorga;
+
+            badge.textContent = efectivo ? 'Emp ✓' : 'Emp ✗';
+            badge.classList.toggle('bg-emerald-100', efectivo);
+            badge.classList.toggle('text-emerald-800', efectivo);
+            badge.classList.toggle('bg-rose-100', !efectivo);
+            badge.classList.toggle('text-rose-800', !efectivo);
+        };
+
+        const actualizarContadores = (empId) => {
+            const dialog = document.getElementById(`empleado-permisos-${empId}`);
+            if (!dialog) return;
+
+            let totalRol = 0;
+            let totalEfectivo = 0;
+
+            dialog.querySelectorAll(`.select-override-${empId}`).forEach(sel => {
+                const rolOtorga = sel.dataset.rolOtorga === '1';
+                const efectivo = sel.value === 'permitir' ? true : sel.value === 'denegar' ? false : rolOtorga;
+
+                totalRol += rolOtorga ? 1 : 0;
+                totalEfectivo += efectivo ? 1 : 0;
+            });
+
+            const totalRolEl = dialog.querySelector(`[data-total-rol-${empId}]`);
+            const totalEfectivoEl = dialog.querySelector(`[data-total-efectivo-${empId}]`);
+            if (totalRolEl) totalRolEl.textContent = String(totalRol);
+            if (totalEfectivoEl) totalEfectivoEl.textContent = String(totalEfectivo);
+        };
+
         // Restablecer overrides de empleado a nivel visual
         document.addEventListener('click', (e) => {
             const btnReset = e.target.closest('[data-reset-overrides]');
@@ -161,7 +196,9 @@
                 document.querySelectorAll(`.select-override-${empId}`).forEach(sel => {
                     sel.value = '';
                     sel.className = 'rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-' + empId + ' border-ink/15 bg-surface text-ink/70';
+                    actualizarPermisoEfectivo(sel);
                 });
+                actualizarContadores(empId);
             }
         });
 
@@ -177,6 +214,9 @@
                 } else {
                     sel.className = `rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-${empId} border-ink/15 bg-surface text-ink/70`;
                 }
+
+                actualizarPermisoEfectivo(sel);
+                actualizarContadores(empId);
             }
         });
 

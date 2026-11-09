@@ -17,7 +17,7 @@ return new class extends Migration
                 'reportes', 'sucursales', 'empleados', 'roles_permisos', 'ajustes_generales',
                 'notificaciones',
             ]);
-            $table->enum('accion', ['ver', 'crear', 'editar', 'eliminar', 'exportar', 'aprobar']);
+            $table->enum('accion', ['ver', 'crear', 'editar', 'eliminar']);
 
             $table->primary(['rol_id', 'modulo', 'accion']);
         });

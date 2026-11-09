@@ -4,16 +4,26 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Iniciar sesión | ViaGest</title>
+        <title>Iniciar sesión | {{ $configuracion->nombre_comercial ?? 'ViaGest' }}</title>
 
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>
+            :root {
+                --color-primary: {{ $coloresSistema['primary'] }};
+                --color-secondary: {{ $coloresSistema['secondary'] }};
+                --color-accent: {{ $coloresSistema['accent'] }};
+                --color-background: {{ $coloresSistema['background'] }};
+                --color-surface: {{ $coloresSistema['surface'] }};
+                --color-ink: {{ $coloresSistema['ink'] }};
+            }
+        </style>
     </head>
     <body class="min-h-screen bg-background font-sans text-ink antialiased">
         <div class="relative min-h-screen overflow-hidden">
             <div
                 class="absolute inset-0"
-                style="background: radial-gradient(circle at 50% 20%, rgba(11, 79, 108, 0.12), transparent 65%);"
+                style="background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 65%);"
                 aria-hidden="true"
             ></div>
 
@@ -35,14 +45,22 @@
                     <div class="-mx-8 -mt-8 mb-8 h-1.5 bg-gradient-to-r from-primary via-secondary to-accent sm:-mx-10 sm:-mt-10"></div>
 
                     <div class="mb-8 text-center">
-                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-white shadow-lg">
-                            VG
-                        </div>
+                        @if ($logoUrl)
+                            <img
+                                src="{{ $logoUrl }}"
+                                alt="Logo de {{ $configuracion->nombre_comercial }}"
+                                class="mx-auto h-14 w-14 rounded-2xl bg-white object-contain p-1.5 shadow-lg"
+                            >
+                        @else
+                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-white shadow-lg">
+                                {{ $inicialesMarca }}
+                            </div>
+                        @endif
                         <h1 class="mt-5 text-2xl font-semibold tracking-tight text-ink">
                             Iniciar sesión
                         </h1>
                         <p class="mt-2 text-sm text-ink/60">
-                            Acceso interno de empleados a ViaGest
+                            Acceso interno de empleados a {{ $configuracion->nombre_comercial }}
                         </p>
                     </div>
 

@@ -11,7 +11,7 @@ class ConfiguracionEmpresaSeeder extends Seeder
     {
         DB::table('configuracion_empresa')->updateOrInsert(
             ['id' => 1],
-            ['nombre_comercial' => 'Mi Agencia de Viajes'],
+            ['nombre_comercial' => 'ViaGest'],
         );
     }
 }
