@@ -6,7 +6,9 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\RolController;
+use App\Http\Controllers\ServicioController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -45,6 +47,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permiso:roles_permisos,ver')->group(function () {
         Route::resource('roles', RolController::class)->except(['show']);
     });
+
+    Route::resource('proveedores', ProveedorController::class)->except(['show'])->parameters(['proveedores' => 'proveedor']);
+    Route::patch('proveedores/{proveedor}/estado', [ProveedorController::class, 'actualizarEstado'])->name('proveedores.estado');
+
+    Route::resource('servicios', ServicioController::class)->except(['show'])->parameters(['servicios' => 'servicio']);
+    Route::patch('servicios/{servicio}/estado', [ServicioController::class, 'actualizarEstado'])->name('servicios.estado');
 
     Route::middleware('es_administrador')->group(function () {
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria.index');

@@ -27,8 +27,12 @@
     "file": "assets/instrument-sans-600-normal-B9e8oLYv.woff",
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
+  "_sweetalert2.all-B4ZjFHUr.js": {
+    "file": "assets/sweetalert2.all-B4ZjFHUr.js",
+    "name": "sweetalert2.all"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-CRXnPKnB.css",
+    "file": "assets/app-yYpLP1d4.css",
     "name": "app",
     "names": [
       "app.css"
@@ -49,10 +53,13 @@
     "isEntry": true
   },
   "resources/js/clientes.js": {
-    "file": "assets/clientes-9TGP17J8.js",
+    "file": "assets/clientes-3-FPzFMn.js",
     "name": "clientes",
     "src": "resources/js/clientes.js",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.all-B4ZjFHUr.js"
+    ]
   },
   "resources/js/dashboard.js": {
     "file": "assets/dashboard-BAYQC5MY.js",
@@ -66,10 +73,28 @@
     "src": "resources/js/empleados.js",
     "isEntry": true
   },
+  "resources/js/proveedores.js": {
+    "file": "assets/proveedores-BnWl0x5b.js",
+    "name": "proveedores",
+    "src": "resources/js/proveedores.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.all-B4ZjFHUr.js"
+    ]
+  },
   "resources/js/roles.js": {
     "file": "assets/roles-CJ_BqJJb.js",
     "name": "roles",
     "src": "resources/js/roles.js",
     "isEntry": true
+  },
+  "resources/js/servicios.js": {
+    "file": "assets/servicios-Be9704tQ.js",
+    "name": "servicios",
+    "src": "resources/js/servicios.js",
+    "isEntry": true,
+    "imports": [
+      "_sweetalert2.all-B4ZjFHUr.js"
+    ]
   }
 }

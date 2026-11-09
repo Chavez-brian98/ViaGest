@@ -15,8 +15,8 @@ return [
             'titulo' => 'Catalogo',
             'items' => [
                 ['label' => 'Paquetes', 'icono' => 'cube', 'ruta' => null],
-                ['label' => 'Servicios', 'icono' => 'globe', 'ruta' => null],
-                ['label' => 'Proveedores', 'icono' => 'building', 'ruta' => null],
+                ['label' => 'Servicios', 'icono' => 'globe', 'ruta' => 'servicios.index'],
+                ['label' => 'Proveedores', 'icono' => 'building', 'ruta' => 'proveedores.index'],
                 ['label' => 'Cupos', 'icono' => 'calendar', 'ruta' => null],
             ],
         ],
