@@ -1,75 +1,78 @@
 # ViaGest - AGENTS.md
 
-ERP interno de agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vite 8 + Tailwind 4, ApexCharts). No hay API ni portal publico: todo se sirve por `routes/web.php`.
+ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, Vite + Tailwind 4). App MVC clasica: las pantallas se renderizan en el servidor, **no hay API ni portal publico**; todo entra por `routes/web.php`. Dominio, modulos y alcance funcional: ver `README.md`.
+
+## Como funciona el proyecto (flujo de una peticion)
+
+- `routes/web.php` es la unica entrada web. `/` es el login (`GET` -> `login`, `POST` -> `login.store`, middleware `guest`); no existe `home`. Tras autenticar se redirige a `dashboard`. El grupo `auth` tiene: dashboard, perfil, clientes, empleados, proveedores, servicios, roles (protegido con `permiso:roles_permisos,ver`) y auditoria (protegido con `es_administrador`).
+- Pipeline por peticion: ruta + middleware -> **controlador delgado** -> **FormRequest** (normaliza y valida) -> **Service** (reglas de negocio, transacciones, auditoria) -> Eloquent / Query Builder -> vista Blade (`@extends('layouts.app')`).
+- Ubicaciones y convenciones: controladores en `app/Http/Controllers` (login en `auth/`, minuscula), requests en `app/Http/Requests/<Modulo>`, logica en `app/Service/<Modulo>`, modelos en `app/Models`. Vistas por modulo en `resources/views/<modulo>/` con `index`/`create`/`edit` y parciales `_tabla`/`_form` reutilizados. Sigue ese patron antes de inventar otro.
+- Middleware: los alias se registran en `bootstrap/app.php` (estilo Laravel 11+, **no existe** `app/Http/Kernel.php`): `permiso:modulo,accion` (`VerificarPermiso`) y `es_administrador`. Ese archivo tambien define routing y manejo de excepciones.
+- Permisos: `Empleado::tienePermiso()` revisa primero overrides por empleado en `empleado_permisos` (`efecto` = `permitir`/`denegar`) y, si no hay override, hereda de `rol_permisos`. El rol llamado exactamente `administrador` tiene bypass total. Los modulos/acciones validos son `RolService::MODULOS_ETIQUETAS` y `RolService::ACCIONES`; si agregas un modulo, actualiza ambos y el enum de la migracion `empleado_permisos`. Hoy solo roles y auditoria exigen middleware; clientes, empleados, proveedores y servicios solo piden `auth`. El sidebar (`config/navegacion.php`) lista todo item con `ruta`; `ruta => null` se muestra como "Pronto" deshabilitado (no valida permisos).
+- Auditoria: los Services llaman a `AuditoriaService::registrar()` (metodo estatico) en crear/actualizar/eliminar/toggle, y `LoginService` registra inicio/cierre de sesion. Guarda JSON de antes/despues, IP y excluye `password`/`remember_token` en `app/Service/Auditoria/AuditoriaService.php:17`. Visor admin en `/auditoria`.
+- Reglas de negocio en Services lanzan `DomainException`; el controlador la convierte en `with('error')` o JSON 422 (ver `RolController::actualizarEstado`). Borrado en dos pasos: primero deshabilitar (`estado = inactivo`), luego eliminar; el rol administrador es inmutable. Proveedores y servicios ademas bloquean el borrado si tienen registros relacionados.
+- Listados con busqueda/filtros: el `index` renderiza el parcial `_tabla`; si `$request->ajax()` el controlador devuelve `response()->view('modulo._tabla', ...)`. El JS del modulo hace fetch del parcial (header `X-Requested-With: XMLHttpRequest`) y los toggles de estado son rutas `PATCH` que responden JSON con `expectsJson()`.
+
+## Auth
+
+- La tabla de acceso es `empleados` (email/password/rol_id/acceso), **NO** `users`. `config/auth.php` usa `App\Models\Empleado` como provider `users`. No reintroduzcas `users`.
+- Login exige `acceso = 'activo'`, regenera sesion y actualiza `ultimo_acceso_at` (`app/Service/Auth/LoginService.php`). El esquema pide coherencia entre `acceso`, `rol_id` y `password`; validala en la app.
+- Usuario sembrado: `admin@viagest.com` / `1234` (`AdminUserSeeder`). `RolesSeeder` crea administrador/vendedor/cajero/recursos_humanos/operaciones y `RolPermisosSeeder` sus permisos. `DemoDashboardSeeder` crea ventas demo solo si `ventas` esta vacio.
+- Perfil es autoservicio: en `/perfil` solo son editables la foto y la contrasena; el resto se muestra de solo lectura. Por eso `PerfilRequest` declara esos campos como `nullable` (no `required`): un `PUT` que solo manda foto/clave debe pasar. `foto_perfil` usa el disco `public` (`storage:link`).
+- Namespaces sensibles a mayusculas: `App\Http\Controllers\auth` (minuscula), `App\Http\Requests\Auth` y `App\Service\Auth`. En Linux carpeta y namespace deben coincidir.
+
+## Modelos
+
+- Solo existen `Empleado` (Authenticatable), `Rol`, `Sucursal`, `Cliente` y `Auditoria` (mapea `bitacora_auditoria`, sin timestamps salvo `created_at`).
+- El resto de tablas **no tiene modelo**: usa `DB::table(...)` como ya se hace para `rol_permisos`/`empleado_permisos` (`Empleado`, `RolService`, `EmpleadoService`), proveedores/servicios (`ProveedorService`, `ServicioService`), dependencias de borrado y datos de dashboard. No crees un modelo por cada tabla sin necesidad.
+- Proveedores y servicios no usan route model binding: los controladores reciben `int $proveedor`/`int $servicio` y las rutas declaran `->parameters(['proveedores' => 'proveedor'])`/`['servicios' => 'servicio']`. Codigos sugeridos: `EMP-####`, `PROV-####`, `SRV-####`.
+
+## Entorno (bloqueante en esta maquina)
+
+- No hay `.env` en el repo (gitignored). El `.env` local actual apunta a MySQL en Docker: contenedor `mybdd`, base `Viagest`, usuario `root`, clave `1234`, host `127.0.0.1:3306`. Docker Desktop debe estar corriendo y publicar el puerto 3306; si aparece `SQLSTATE[HY000] [2002] Connection refused`, revisa `docker ps`/mapeo de puertos o valida el servidor con `docker exec mybdd mysql -uroot -p1234 -e "SELECT 1;"`.
+- PHP: el PATH puede resolver al PHP de XAMPP (`8.2`, inservible porque el proyecto exige `^8.3`). Verifica `php -v`; si no es 8.3+, antepon el PHP 8.4.16: `$env:PATH = "C:\php;$env:PATH"` antes de `composer`/`php`.
+- Para un entorno desde cero: `Copy-Item .env.example .env`, `php artisan key:generate`, crear `database/database.sqlite` (no existe) y `php artisan migrate --seed`. `.env.example` es sqlite con `DB_DATABASE` comentado, por lo que el default es `database/database.sqlite`; el conector sqlite **lanza excepcion si el archivo no existe**, asi que `composer setup` falla en `migrate` si no lo creas antes.
+- Los tests **requieren `APP_KEY`**: sin `.env`/key fallan con "No application encryption key has been specified". `phpunit.xml` fuerza `DB_CONNECTION=sqlite` + `DB_DATABASE=:memory:`; los tests no tocan tu BD real.
+- Produccion: MySQL 8.0.16+. No agregues SQL/funciones exclusivas de MySQL en tests o migraciones.
 
 ## Comandos (Windows / PowerShell)
 
-- Instalar: `composer install`, `npm install` (`.npmrc` tiene `ignore-scripts=true`) y `php artisan storage:link` (fotos de perfil).
-- BD: `php artisan migrate --seed` o `php artisan migrate:fresh --seed`.
-- Tests: `composer test` (hace `config:clear` y corre `php artisan test` sobre sqlite `:memory:`). Un test: `php artisan test --filter=<nombre>`.
-- Formato: `vendor\bin\pint` en archivos tocados; `--test` solo verifica. No hay linter/formatter JS ni typecheck; los unicos scripts son `npm run dev` y `npm run build`.
-- Stack completo: `composer dev` (`php artisan dev`).
-- Este checkout usa MySQL local `Viagest` (`.env`); `.env.example` queda en sqlite y `database/database.sqlite` no existe. Los tests no dependen de MySQL.
-- `public/build` esta trackeado pese a figurar en `.gitignore`: evita commitear artefactos de build.
+- Instalar: `composer install`, `npm install`, `php artisan storage:link`.
+- BD: `php artisan migrate --seed` (o `migrate:fresh --seed`).
+- Tests: `composer test` (limpia config y corre la suite; hoy 101 tests en verde). Un test: `php artisan test --filter=<nombre>`.
+- Formato: `vendor\bin\pint` en archivos tocados (`--test` solo verifica). No hay `pint.json`: corre con defaults.
+- Frontend: `npm run dev`, `npm run build`. **No hay** linter/formatter/typecheck JS ni CI (`.github` no existe).
+- `composer dev` = `php artisan dev` (sirve el stack completo).
+- `/public/build` esta en `.gitignore` pero se commitea parcialmente (manifest, fonts y assets base); los chunks por modulo no se trackean, asi que ejecuta `npm run build` tras tocar JS y commitea el `manifest.json` actualizado.
 
-## Login y auth
+## Esquema y migraciones (leer antes de crear/editar)
 
-- Rutas: `GET /` (`login`) y `POST /` (`login.store`); no existe `/login`. Logout: `POST /logout` (`logout`). Dashboard: `GET /dashboard` (`dashboard`).
-- `config/auth.php` usa `App\Models\Empleado` con la tabla `empleados`; el provider sigue llamandose `users`. No reintroduzcas `users`.
-- El login exige `acceso = 'activo'`; al entrar regenera sesion y actualiza `ultimo_acceso_at`. Logica en `App\Service\Auth\LoginService`, request en `App\Http\Requests\Auth`, controlador en `App\Http\Controllers\auth` (minuscula): respeta mayusculas/minusculas en Linux.
-- `AdminUserSeeder` crea `admin@viagest.com` / `1234`; `DemoDashboardSeeder` agrega ventas/cuotas demo. `DatabaseSeeder` ejecuta ConfiguracionEmpresa, Roles, RolPermisos, AdminUser y DemoDashboard. `DatosDemoDashboardSeeder` es un duplicado no usado: edita `DemoDashboardSeeder`.
-- Login: pagina standalone con `@fonts`/`@vite`, video fijo en `public/videos/login.mp4` y gradiente de respaldo. `configuracion_empresa.imagenes_login` es JSON de **imagenes**, no video; para hacerlo configurable crea una migracion nueva (despues de `000030`).
-- Modelos Eloquent existentes: `App\Models\Empleado` (auth), `App\Models\Cliente`, `App\Models\Sucursal` y `App\Models\Rol`; el resto del esquema no tiene modelos.
+- Fuente de verdad: `database/migrations/2026_10_13_000001`-`000029` (29 tablas), `000030` (5 vistas `v_*`), `000031` (`foto_perfil`) y `000032` (`empleado_permisos`). Una migracion por tabla, numeradas por dependencias FK; al agregar, continua despues de la ultima con fecha nueva (`AAAA_MM_DD_0000NN_*`). No reordenes ni consolides.
+- Convenciones: snake_case en espanol y plural; PK `id`; FK `<entidad>_id`; `ENUM` para estados/tipos; dinero `DECIMAL(12,2)`; porcentajes `DECIMAL(10,4)`.
+- Unicos/indices llevan nombres explicitos `uq_*`/`idx_*` (hay ~90); las FKs usan `->constrained()` por defecto, salvo la FK compuesta `fk_pagos_cliente_cuota_venta` (`(cuota_id, venta_id) -> cuotas_cobro (id, venta_id)`), que depende del unique `uq_cuotas_cobro_id_venta`. No lo elimines.
+- `empleado_permisos` usa PK compuesta `(empleado_id, modulo, accion)` y columna `efecto` (`permitir`/`denegar`); `EmpleadoService::actualizarPermisos()` borra y reinserta con `insertOrIgnore`, validando contra las constantes de `RolService`.
+- Deben ser **portables** (solo Schema/Blueprint) porque los tests corren en sqlite. La migracion de vistas ramifica por driver con `DB::getDriverName()`. Los `CHECK` del diseno original no se tradujeron (Blueprint no los soporta): validalos en la app, no con SQL crudo.
+- Datos derivados (totales, saldos, cupos disponibles, precio de paquete) viven en las vistas `v_*`; no agregues columnas para ellos (`DashboardService` las consulta con Query Builder y agrega en PHP).
 
-## Perfil
+## Vistas y frontend
 
-- Rutas: `GET /perfil` (`perfil.edit`) y `PUT /perfil` (`perfil.update`), dentro de `auth`. Controlador `App\Http\Controllers\PerfilController` -> `App\Service\Perfil\PerfilService`; validacion en `App\Http\Requests\Perfil\PerfilRequest`.
-- El footer del sidebar es el acceso al perfil: enlaza avatar/nombre/email a `perfil.edit`; el boton de logout queda fuera del enlace.
-- Se editan nombres, apellidos, documento, telefono, email, cargo, sucursal, contrato, fechas, salario y contraseña. `codigo`, `rol_id`, `estado` y `acceso` son de solo lectura en el perfil.
-- La foto vive en `empleados.foto_perfil` (migracion `000031`), se guarda en el disco `public` bajo `perfiles/{empleado_id}` y se elimina/reemplaza desde el mismo formulario. Requiere `storage:link`; formatos JPG/PNG/WebP hasta 2 MB.
-- Cambiar contraseña exige `password_actual`; la nueva se valida con `confirmed` y minimo 8 caracteres. El cast `hashed` del modelo hace el hash.
-- La vista es `resources/views/perfil/edit.blade.php`; no usa entry Vite propio, el preview de la foto es JS inline en `@push('scripts')`.
-
-## Clientes
-
-- CRUD en `App\Http\Controllers\ClienteController` -> `App\Service\Clientes\ClienteService`; validacion en `App\Http\Requests\Clientes\ClienteRequest`. No hay vista `show`: el detalle se muestra en un `<dialog>` de `clientes/_tabla.blade.php`.
-- Rutas: `Route::resource('clientes')->except(['show'])`, `PATCH /clientes/{cliente}/estado` (`clientes.estado`, toggle desde la tabla) y `PATCH /clientes/{cliente}/deshabilitar` (`clientes.deshabilitar`, legado) dentro del grupo `auth`.
-- `ClienteService::listar()` busca por codigo, nombres, apellidos, razon social, documento, email o telefono y filtra por `estado`, `tipo` y `sucursal_id`; pagina 12 con `withQueryString`. El index devuelve solo `clientes._tabla` si la peticion es AJAX.
-- Reglas: `codigo` unico, `(tipo_documento, numero_documento)` unico, `(pasaporte_pais, pasaporte_numero)` unico; persona exige `nombres`, empresa exige `razon_social`; documento y pasaporte se validan en pareja. El FormRequest recorta, normaliza mayusculas/minusculas y convierte cadenas vacias a `null`.
-- El estado se cambia con un toggle en la columna Estado de la tabla (`estado_destino`) y tambien en el formulario create/edit; `estado` es opcional en el request y por defecto `activo`. El toggle de la tabla envia AJAX, espera JSON y actualiza la fila sin recargar.
-- Eliminar exige `estado = inactivo` y bloquea si hay filas en `ventas`, `venta_viajeros` o `prospectos` (`DomainException` -> flash `error`). El icono de basura solo aparece en inactivos.
-- `resources/js/clientes.js` (entry Vite propio) hace busqueda en vivo con debounce/fetch de `_tabla`, filtros AJAX por estado/tipo/sucursal, paginacion AJAX, apertura de `<dialog>` y confirmaciones SweetAlert2 sobre `form[data-confirm]`. No cargues SweetAlert2 globalmente.
-
-## Dominio y migraciones
-
-- Esquema en `database/migrations/2026_10_13_000001`-`000029` (29 tablas), `000030` (5 vistas: `v_paquetes_precio`, `v_venta_totales`, `v_ventas_saldo`, `v_cuotas_cobro_estado`, `v_cupos_disponibles`) y `000031` (`empleados.foto_perfil`). Una migracion por tabla, en orden de dependencias FK; agrega tablas nuevas despues de `000031` y no reordenes/consolides.
-- Deben ser portables (solo Schema/Blueprint): los tests corren sqlite `:memory:`. Nada de DDL crudo MySQL ni funciones de MySQL; evita agregar columnas generadas (las existentes con `virtualAs` en `sucursales`/`venta_viajeros` ya funcionan en sqlite). Las vistas ramifican por `DB::getDriverName()`.
-- Los `CHECK` no estan en las migraciones (Blueprint no los soporta); validalos en la app. Las reglas de negocio (solapamiento de agenda de guias, cupos al vender, coherencia pasaporte/documento) tambien van en la aplicacion.
-- Convenciones: snake_case en espanol y plural; PK `id`; FK `<entidad>_id`; `ENUM` para estados/tipos; dinero `DECIMAL(12,2)`; porcentajes `DECIMAL(10,4)`; `created_at`/`updated_at`.
-- Datos derivados (totales, saldos, cupos disponibles, precio de paquete) viven solo en las vistas `v_*`; no agregues columnas para ellos.
-- La mayoria de constraints usa nombres por defecto de Laravel. Conserva los explicitos existentes: `uq_*` y, sobre todo, `uq_cuotas_cobro_id_venta` + `fk_pagos_cliente_cuota_venta` (FK compuesta `(cuota_id, venta_id) -> cuotas_cobro (id, venta_id)`).
-
-## Dashboard y frontend
-
-- `DashboardController` -> `App\Service\Dashboard\DashboardService`; consulta las vistas `v_*` con Query Builder. Devuelve `metricas` y `graficas` (mas arrays planos heredados). La tabla de cuotas proximas usa paginacion (`cuotas_page`, 8 por pagina).
-- El service mezcla agregacion en PHP con SQL por driver: `strftime`/`DATE_FORMAT`/`to_char` para meses y `CONCAT`/`TRIM` en algunas consultas. Si tocas esas consultas, verifica sqlite y MySQL; `DashboardTest` solo prueba el dashboard vacio, no los graficos con datos.
-- ApexCharts solo se importa en `resources/js/dashboard.js` (entry Vite separado, ~900 kB); no lo cargues globalmente. Los datos llegan por `window.dashboardGraficas` con `@json($graficas)` en `@push('scripts')` (no `dashboardCharts`).
-- Gotcha: `@json(...)` de Blade se rompe si el array va en varias lineas; pasalo en una sola linea.
-- El shell autenticado no scrollea en `lg+`: body `h-screen overflow-hidden`, main `lg:overflow-hidden`, contenedores del dashboard `min-h-0 flex-1`. En movil hay drawer y scroll normal. Las paginas de formulario (create/edit de clientes y perfil) usan su propio contenedor `h-full overflow-y-auto`.
-
-## Vistas y estilos
-
-- `resources/views/layouts/app.blade.php` es el shell autenticado (sidebar + topbar). Las vistas lo extienden con `@section('titulo')`, `@section('contenido')` y `@push('scripts')`; el menu vive en `config/navegacion.php` (items con `ruta => null` se muestran deshabilitados).
-- No hay componentes Blade ni libreria de iconos: los iconos son SVG inline (mapa `$icons` en el layout). `welcome.blade.php` es solo el scaffold.
-- Partials compartidos: `partials.breadcrumb` (`items` con `label`/`url`, empieza en Dashboard) y `partials.paginacion` (`paginator`, `etiqueta`). En clientes la paginacion debe quedar dentro de `#clientesTabla` para que el AJAX de `resources/js/clientes.js` la intercepte; por eso no uses `$paginator->links()` directamente.
-- Tailwind 4 se importa en `resources/css/app.css` con `@import 'tailwindcss'` y el plugin `@tailwindcss/vite`; no hay `tailwind.config.js`, PostCSS ni TypeScript. `resources/js/app.js` solo controla el sidebar; `resources/js/clientes.js` y `resources/js/dashboard.js` son entries separados.
-- Las transiciones entre paginas usan `@view-transition { navigation: auto; }` en `app.css` (cross-document View Transitions). Los estilos `.estado-switch`/`.estado-texto` animan el toggle y respetan `prefers-reduced-motion: reduce`.
-- Paleta temporal en `@theme` de `app.css`: `primary` #0b4f6c, `secondary` #1ca3aa, `accent` #f28f3b, `background` #f5f8fa, `surface` #ffffff, `ink` #1f2933. Usa `bg-primary`, `text-ink`, `border-ink/10`, etc.; los hex de ApexCharts en `dashboard.js` deben coincidir. Rose/emerald/amber solo para estados de datos y acciones destructivas/deshabilitar.
-- UI: responsive (movil/tablet/escritorio), accesible (labels, `aria-*`, foco, contraste) y consistente con la card de `auth/login.blade.php`. Backend: controlador delgado, validacion en FormRequest, logica en `app/Service`, modelos Eloquent; logica de negocio fuera de Blade y SQL crudo solo si es inevitable (con rama por driver).
+- Layout unico `resources/views/layouts/app.blade.php` (sidebar colapsable con `localStorage` + topbar). Secciones `titulo`/`contenido` y `@push('scripts')`; todo `@push` debe tener su `@endpush` o Blade lanza "Cannot end a push stack without first starting one". Iconos: SVG inline en el mapa `$icons`; no hay componentes Blade ni libreria de iconos.
+- Paleta/tema en `resources/css/app.css` (`@theme`): `primary #0b4f6c`, `secondary #1ca3aa`, `accent #f28f3b`, `background`, `surface`, `ink`; fuente Instrument Sans via Bunny fonts. Usa clases `bg-primary`, `text-ink`, `border-ink/10`, etc. No introduzcas paletas genericas ni `tailwind.config.js` (Tailwind 4 con `@tailwindcss/vite`; no hay PostCSS ni TypeScript).
+- Cada modulo de listado tiene su entry Vite propio (`resources/js/{clientes,empleados,roles,auditoria,proveedores,servicios}.js`) con `@vite(...)` en el `@push('scripts')` del index. **Al crear un modulo nuevo, agrega su JS al `input` de `vite.config.js`** o el build falla/queda sin asset.
+- Roles no tiene vista ni ruta `edit`: la edicion y los permisos se hacen desde dialogos del index (`roles/_detalle_permisos_dialog.blade.php`) que envian `PUT roles/{role}` y `PATCH roles/{role}/permisos`. Empleados tiene su propio dialogo de overrides (`empleados/_permisos_dialog.blade.php`, `PATCH empleados/{empleado}/permisos`).
+- JS de listados: busqueda con debounce, `fetch` del parcial `_tabla`, actualizacion de URL con `history.replaceState`, confirmaciones y dialogos con **SweetAlert2** (`sweetalert2` es dependencia npm). Paginacion propia en `partials/paginacion.blade.php`; los paginadores usan `->withQueryString()`.
+- Dashboard: **ApexCharts** solo en `resources/js/dashboard.js` (entry separado, pesado; no lo cargues globalmente). Datos por `window.dashboardGraficas` (`@json($graficas)`), no `dashboardCharts`. Gotcha: `@json(...)` debe ir en **una sola linea**.
+- Dashboard y vistas de listado no scrollean en `lg+`: shell `h-screen overflow-hidden`, filas `lg:min-h-0 lg:flex-1`; en movil el sidebar es drawer con `overflow-y-auto`.
 
 ## Tests
 
-- Tests con `RefreshDatabase` y `$this->withoutVite()` (el manifiesto de Vite no existe en CI). No hay factories: `LoginTest`/`DashboardTest`/`ClienteTest`/`PerfilTest` crean fixtures con `DB::table(...)->insertGetId(...)` en `ciudades`/`sucursales`/`roles` y luego `Empleado::create()`.
-- `DashboardTest` cubre invitado redirigido y dashboard autenticado vacio; no crea ventas, asi que no valida las consultas de graficas.
-- `ClienteTest` cubre invitado, listado/busqueda (HTML y parcial AJAX), filtros, paginacion, create/edit, alta de persona, empresa sin razon social, actualizacion, toggle de estado (redirect y JSON), deshabilitar, borrado bloqueado de activos y de inactivos con ventas, y borrado de inactivo sin relaciones.
-- `PerfilTest` cubre invitado, vista del perfil, actualizacion de datos, email unico, cambio de contraseña con contraseña actual, rechazo de contraseña actual incorrecta y alta/reemplazo/eliminacion de foto con `Storage::fake('public')`.
+- Feature tests por modulo en `tests/Feature/<Modulo>/`; usan `RefreshDatabase` y `$this->withoutVite()` en `setUp`.
+- No existe `database/factories` (aunque composer declare el namespace): no hay `factory()`. Arma fixtures con `DB::table(...)->insertGetId(...)` en `ciudades`/`sucursales`/`roles` y luego `Model::create()` (patron de `LoginTest`/`RolTest`). Respeta los NOT NULL y unicos reales: `empleados` exige `codigo`, `nombres`, `apellidos`, `sucursal_id`, `cargo`, `fecha_ingreso` y unicidad de `email` y `(tipo_documento, numero_documento)`.
+- El bypass de permisos depende de que el rol se llame exactamente `administrador`; los tests crean ese rol a mano. Verifica tambien filas en `bitacora_auditoria` cuando toques Services.
+
+## Estandares (obligatorios)
+
+- **Responsivo**: movil, tablet y escritorio (`sm:`/`md:`/`lg:`); la card de login es la referencia visual.
+- **Profesional**: usa los tokens del tema, espaciado consistente, transiciones sutiles; evita estilos inline arbitrarios.
+- **UX/UI**: jerarquia clara, coherencia entre pantallas, accesibilidad (contraste, `aria-*`, labels, `autocomplete`, foco y errores).
+- **Backend limpio**: controlador delgado que solo orquesta, validacion/normalizacion en `FormRequest`, reglas en `app/Service`, Eloquent o Query Builder para datos; sin logica de negocio en la vista. Textos de UI en espanol.

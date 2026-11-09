@@ -34,7 +34,7 @@
         <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-base font-semibold text-ink">Datos generales</h2>
-                <p class="text-xs text-ink/45">Identificación y registro del empleado.</p>
+                <p class="text-xs text-ink/45">Identificación, sucursal y perfil de acceso del empleado.</p>
             </div>
             <div class="flex items-center gap-2.5">
                 <span class="text-xs font-medium text-ink/45">Estado</span>
@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <label for="codigo" class="{{ $labelBase }}">Código {!! $requerido !!}</label>
                 <input
@@ -102,6 +102,29 @@
             </div>
 
             <div>
+                <label for="rol_id" class="{{ $labelBase }}">Rol asignado</label>
+                <select
+                    id="rol_id"
+                    name="rol_id"
+                    class="{{ $inputBase }} {{ $errors->has('rol_id') ? $inputError : $inputNormal }}"
+                >
+                    <option value="">Sin rol (sin acceso)</option>
+                    @foreach ($roles as $rol)
+                        <option
+                            value="{{ $rol->id }}"
+                            @selected((string) old('rol_id', $empleado->rol_id) === (string) $rol->id)
+                        >
+                            {{ ucfirst($rol->nombre) }} ({{ $rol->alcance === 'todas_sucursales' ? 'Global' : 'Sucursal' }})
+                        </option>
+                    @endforeach
+                </select>
+                <p class="{{ $ayuda }}">Define los permisos base del usuario.</p>
+                @error('rol_id')
+                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div>
                 <label for="cargo" class="{{ $labelBase }}">Cargo</label>
                 <input
                     id="cargo"
@@ -109,6 +132,7 @@
                     type="text"
                     value="{{ old('cargo', $empleado->cargo) }}"
                     maxlength="100"
+                    placeholder="Ej. Agente de Ventas"
                     class="{{ $inputBase }} {{ $errors->has('cargo') ? $inputError : $inputNormal }}"
                 >
                 @error('cargo')
@@ -168,7 +192,7 @@
                 >
                     <option value="">Sin documento</option>
                     <option value="dui" @selected(old('tipo_documento', $empleado->tipo_documento) === 'dui')>DUI</option>
-                    <option value="nit" @selected(old('tipo_documento', $empleado->tipo_documento) === 'nit')>NIT</option>
+                    <option value="pasaporte" @selected(old('tipo_documento', $empleado->tipo_documento) === 'pasaporte')>Pasaporte</option>
                     <option value="carnet_residente" @selected(old('tipo_documento', $empleado->tipo_documento) === 'carnet_residente')>Carnet de residente</option>
                     <option value="otro" @selected(old('tipo_documento', $empleado->tipo_documento) === 'otro')>Otro</option>
                 </select>
@@ -289,6 +313,48 @@
                     class="{{ $inputBase }} {{ $errors->has('salario_base') ? $inputError : $inputNormal }}"
                 >
                 @error('salario_base')
+                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+    </section>
+
+    <section class="rounded-2xl border border-ink/10 bg-surface p-5 shadow-sm sm:p-6">
+        <div class="mb-5">
+            <h2 class="text-base font-semibold text-ink">Credenciales de acceso</h2>
+            <p class="text-xs text-ink/45">Acceso al sistema y credenciales preventivas.</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+                <label for="password" class="{{ $labelBase }}">Contraseña de acceso</label>
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="{{ $esEdicion ? 'Dejar en blanco para conservar actual' : 'Mínimo 4 caracteres' }}"
+                    class="{{ $inputBase }} {{ $errors->has('password') ? $inputError : $inputNormal }}"
+                >
+                <p class="{{ $ayuda }}">{{ $esEdicion ? 'Solo ingresa valor si deseas cambiarla.' : 'Contraseña provisional para iniciar sesión.' }}</p>
+                @error('password')
+                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div>
+                <label for="acceso" class="{{ $labelBase }}">Estado de acceso al sistema</label>
+                <select
+                    id="acceso"
+                    name="acceso"
+                    class="{{ $inputBase }} {{ $errors->has('acceso') ? $inputError : $inputNormal }}"
+                >
+                    <option value="sin_acceso" @selected(old('acceso', $empleado->acceso ?? 'sin_acceso') === 'sin_acceso')>Sin acceso (inactivo en login)</option>
+                    <option value="activo" @selected(old('acceso', $empleado->acceso) === 'activo')>Activo (permite iniciar sesión)</option>
+                    <option value="bloqueado" @selected(old('acceso', $empleado->acceso) === 'bloqueado')>Bloqueado (acceso revocado)</option>
+                </select>
+                <p class="{{ $ayuda }}">Control de autenticación en la plataforma.</p>
+                @error('acceso')
                     <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                 @enderror
             </div>

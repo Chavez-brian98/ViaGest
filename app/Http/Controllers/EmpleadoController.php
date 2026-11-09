@@ -47,6 +47,7 @@ class EmpleadoController extends Controller
                 'codigo' => $this->empleadoService->siguienteCodigo(),
             ]),
             'sucursales' => $this->empleadoService->sucursalesActivas(),
+            'roles' => $this->empleadoService->rolesActivos(),
         ]);
     }
 
@@ -64,6 +65,7 @@ class EmpleadoController extends Controller
         return view('empleados.edit', [
             'empleado' => $empleado,
             'sucursales' => $this->empleadoService->sucursalesActivas(),
+            'roles' => $this->empleadoService->rolesActivos(),
         ]);
     }
 
@@ -102,6 +104,32 @@ class EmpleadoController extends Controller
 
         return $this->volverAlListado($request)
             ->with('success', "Empleado {$empleado->nombreCompleto()} deshabilitado. Ya puedes eliminarlo si es necesario.");
+    }
+
+    public function actualizarPermisos(Request $request, Empleado $empleado): RedirectResponse|JsonResponse
+    {
+        $overrides = $request->input('permisos', []);
+
+        try {
+            $this->empleadoService->actualizarPermisos($empleado, is_array($overrides) ? $overrides : []);
+        } catch (DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
+
+            return $this->volverAlListado($request)->with('error', $e->getMessage());
+        }
+
+        $mensaje = "Permisos específicos del empleado \"{$empleado->nombreCompleto()}\" actualizados.";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'mensaje' => $mensaje,
+                'overrides' => $empleado->overridesPermisos(),
+            ]);
+        }
+
+        return $this->volverAlListado($request)->with('success', $mensaje);
     }
 
     public function destroy(Request $request, Empleado $empleado): RedirectResponse
