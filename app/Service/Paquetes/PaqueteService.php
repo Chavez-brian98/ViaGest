@@ -2,6 +2,12 @@
 
 namespace App\Service\Paquetes;
 
+use App\Models\Ciudad;
+use App\Models\Paquete;
+use App\Models\PaqueteServicio;
+use App\Models\Presupuesto;
+use App\Models\Servicio;
+use App\Models\Venta;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
@@ -15,16 +21,16 @@ class PaqueteService
 
     public function obtenerPaginado(array $filtros, int $porPagina = self::POR_PAGINA): LengthAwarePaginator
     {
-        $query = DB::table('paquetes as p')
-            ->leftJoin('ciudades as c', 'c.id', '=', 'p.ciudad_destino_id')
-            ->leftJoin('v_paquetes_precio as vp', 'vp.paquete_id', '=', 'p.id')
+        $query = Paquete::query()
+            ->leftJoin('ciudades as c', 'c.id', '=', 'paquetes.ciudad_destino_id')
+            ->leftJoin('v_paquetes_precio as vp', 'vp.paquete_id', '=', 'paquetes.id')
             ->select(
-                'p.*',
+                'paquetes.*',
                 'c.nombre as destino_nombre',
                 'c.pais_codigo as destino_pais',
                 DB::raw('COALESCE(vp.costo_neto_total, 0) as costo_neto_total'),
                 DB::raw('COALESCE(vp.precio_venta, 0) as precio_venta'),
-                DB::raw('(SELECT COUNT(*) FROM paquete_servicios ps WHERE ps.paquete_id = p.id) as servicios_count')
+                DB::raw('(SELECT COUNT(*) FROM paquete_servicios ps WHERE ps.paquete_id = paquetes.id) as servicios_count')
             );
 
         $buscar = trim((string) ($filtros['buscar'] ?? ''));
@@ -32,109 +38,109 @@ class PaqueteService
         if ($buscar !== '') {
             $like = '%'.$buscar.'%';
             $query->where(function ($q) use ($like): void {
-                $q->where('p.codigo', 'like', $like)
-                    ->orWhere('p.nombre', 'like', $like)
-                    ->orWhere('p.descripcion', 'like', $like);
+                $q->where('paquetes.codigo', 'like', $like)
+                    ->orWhere('paquetes.nombre', 'like', $like)
+                    ->orWhere('paquetes.descripcion', 'like', $like);
             });
         }
 
         if (! empty($filtros['tipo'])) {
-            $query->where('p.tipo', $filtros['tipo']);
+            $query->where('paquetes.tipo', $filtros['tipo']);
         }
 
         if (! empty($filtros['estado'])) {
-            $query->where('p.estado', $filtros['estado']);
+            $query->where('paquetes.estado', $filtros['estado']);
         }
 
         if (! empty($filtros['ciudad_destino_id'])) {
-            $query->where('p.ciudad_destino_id', (int) $filtros['ciudad_destino_id']);
+            $query->where('paquetes.ciudad_destino_id', (int) $filtros['ciudad_destino_id']);
         }
 
         return $query
-            ->orderBy('p.nombre')
+            ->orderBy('paquetes.nombre')
             ->paginate($porPagina)
             ->withQueryString();
     }
 
     public function generarCodigoSugerido(): string
     {
-        return GeneradorCodigoService::siguiente('paquetes', 'PAQ-');
+        return GeneradorCodigoService::siguiente(Paquete::class, 'PAQ-');
     }
 
     public function ciudadesParaSeleccion(): Collection
     {
-        return DB::table('ciudades')
+        return Ciudad::query()
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'pais_codigo']);
     }
 
     public function serviciosDisponiblesParaPaquete(): Collection
     {
-        return DB::table('servicios as s')
-            ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
-            ->where('s.estado', 'activo')
-            ->orderBy('s.tipo')
-            ->orderBy('s.nombre')
+        return Servicio::query()
+            ->leftJoin('proveedores as p', 'p.id', '=', 'servicios.proveedor_id')
+            ->where('servicios.estado', 'activo')
+            ->orderBy('servicios.tipo')
+            ->orderBy('servicios.nombre')
             ->get([
-                's.id',
-                's.codigo',
-                's.nombre',
-                's.tipo',
-                's.costo_neto',
-                's.unidad_cobro',
+                'servicios.id',
+                'servicios.codigo',
+                'servicios.nombre',
+                'servicios.tipo',
+                'servicios.costo_neto',
+                'servicios.unidad_cobro',
                 'p.nombre as proveedor_nombre',
             ]);
     }
 
     public function buscarServicios(string $termino = '', array $excluirIds = []): Collection
     {
-        $query = DB::table('servicios as s')
-            ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
-            ->where('s.estado', 'activo');
+        $query = Servicio::query()
+            ->leftJoin('proveedores as p', 'p.id', '=', 'servicios.proveedor_id')
+            ->where('servicios.estado', 'activo');
 
         if (! empty($excluirIds)) {
-            $query->whereNotIn('s.id', array_map('intval', $excluirIds));
+            $query->whereNotIn('servicios.id', array_map('intval', $excluirIds));
         }
 
         $termino = trim($termino);
         if ($termino !== '') {
             $like = '%'.$termino.'%';
             $query->where(function ($q) use ($like): void {
-                $q->where('s.codigo', 'like', $like)
-                    ->orWhere('s.nombre', 'like', $like)
-                    ->orWhere('s.tipo', 'like', $like)
+                $q->where('servicios.codigo', 'like', $like)
+                    ->orWhere('servicios.nombre', 'like', $like)
+                    ->orWhere('servicios.tipo', 'like', $like)
                     ->orWhere('p.nombre', 'like', $like);
             });
         }
 
         return $query
-            ->orderBy('s.tipo')
-            ->orderBy('s.nombre')
+            ->orderBy('servicios.tipo')
+            ->orderBy('servicios.nombre')
             ->limit(30)
             ->get([
-                's.id',
-                's.codigo',
-                's.nombre',
-                's.tipo',
-                's.costo_neto',
-                's.unidad_cobro',
+                'servicios.id',
+                'servicios.codigo',
+                'servicios.nombre',
+                'servicios.tipo',
+                'servicios.costo_neto',
+                'servicios.unidad_cobro',
                 'p.nombre as proveedor_nombre',
             ]);
     }
 
     public function obtenerServiciosDePaquete(int $paqueteId): Collection
     {
-        return DB::table('paquete_servicios as ps')
-            ->join('servicios as s', 's.id', '=', 'ps.servicio_id')
+        return PaqueteServicio::query()
+            ->join('servicios as s', 's.id', '=', 'paquete_servicios.servicio_id')
             ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
-            ->where('ps.paquete_id', $paqueteId)
-            ->orderBy('ps.dia_inicio')
-            ->orderBy('ps.id')
+            ->where('paquete_servicios.paquete_id', $paqueteId)
+            ->orderBy('paquete_servicios.dia_inicio')
+            ->orderBy('paquete_servicios.id')
             ->select(
-                'ps.id',
-                'ps.servicio_id',
-                'ps.dia_inicio',
-                'ps.cantidad',
+                'paquete_servicios.id',
+                'paquete_servicios.servicio_id',
+                'paquete_servicios.dia_inicio',
+                'paquete_servicios.cantidad',
                 's.codigo as servicio_codigo',
                 's.nombre as servicio_nombre',
                 's.tipo as servicio_tipo',
@@ -145,144 +151,127 @@ class PaqueteService
             ->get();
     }
 
-    public function crear(array $datos, ?int $empleadoId = null): int
+    public function crear(array $datos, ?int $empleadoId = null): Paquete
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $servicios = $datos['servicios'] ?? [];
             unset($datos['servicios']);
 
             $datos['estado'] ??= 'borrador';
-            $datos['created_at'] = now();
-            $datos['updated_at'] = now();
 
             if ($datos['estado'] === 'activo' && $servicios === []) {
                 throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
             }
 
-            $paqueteId = DB::table('paquetes')->insertGetId($datos);
+            $paquete = Paquete::create($datos);
 
-            $this->sincronizarServicios($paqueteId, $servicios);
+            $this->sincronizarServicios($paquete->id, $servicios);
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'crear',
                 'tabla' => 'paquetes',
-                'registro_id' => $paqueteId,
-                'datos_nuevos' => (array) DB::table('paquetes')->find($paqueteId),
+                'registro_id' => $paquete->id,
+                'datos_nuevos' => $paquete->toArray(),
             ]);
 
-            return $paqueteId;
+            return $paquete;
         });
     }
 
-    public function actualizar(int $paqueteId, array $datos, ?int $empleadoId = null): void
+    public function actualizar(Paquete $paquete, array $datos, ?int $empleadoId = null): void
     {
-        DB::transaction(function () use ($paqueteId, $datos, $empleadoId): void {
-            $actual = DB::table('paquetes')->find($paqueteId);
-
-            if (! $actual) {
-                throw new DomainException('El paquete no existe.');
-            }
+        DB::transaction(function () use ($paquete, $datos, $empleadoId): void {
+            $anterior = $paquete->toArray();
 
             $servicios = $datos['servicios'] ?? [];
             unset($datos['servicios']);
 
-            $estadoDestino = $datos['estado'] ?? $actual->estado;
+            $estadoDestino = $datos['estado'] ?? $paquete->estado;
 
             if ($estadoDestino === 'activo' && $servicios === []) {
                 throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
             }
 
-            $datos['updated_at'] = now();
+            $paquete->update($datos);
+            $paquete->refresh();
 
-            DB::table('paquetes')->where('id', $paqueteId)->update($datos);
-
-            $this->sincronizarServicios($paqueteId, $servicios);
+            $this->sincronizarServicios($paquete->id, $servicios);
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'paquetes',
-                'registro_id' => $paqueteId,
-                'datos_anteriores' => (array) $actual,
-                'datos_nuevos' => (array) DB::table('paquetes')->find($paqueteId),
+                'registro_id' => $paquete->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $paquete->toArray(),
             ]);
         });
     }
 
-    public function cambiarEstado(int $paqueteId, string $nuevoEstado, ?int $empleadoId = null): void
+    public function cambiarEstado(Paquete $paquete, string $nuevoEstado, ?int $empleadoId = null): void
     {
-        DB::transaction(function () use ($paqueteId, $nuevoEstado, $empleadoId): void {
-            $actual = DB::table('paquetes')->find($paqueteId);
-
-            if (! $actual) {
-                throw new DomainException('El paquete no existe.');
-            }
-
+        DB::transaction(function () use ($paquete, $nuevoEstado, $empleadoId): void {
             if (! in_array($nuevoEstado, ['borrador', 'activo', 'inactivo'], true)) {
                 throw new DomainException('Estado no permitido.');
             }
 
-            if ($actual->estado === $nuevoEstado) {
+            if ($paquete->estado === $nuevoEstado) {
                 return;
             }
 
-            // Si se pasa a activo, validar que tenga al menos un servicio configurado
-            if ($nuevoEstado === 'activo') {
-                $tieneServicios = DB::table('paquete_servicios')->where('paquete_id', $paqueteId)->exists();
-                if (! $tieneServicios) {
-                    throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
-                }
+            if ($nuevoEstado === 'activo' && ! $this->tieneServicios($paquete)) {
+                throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
             }
 
-            DB::table('paquetes')->where('id', $paqueteId)->update([
-                'estado' => $nuevoEstado,
-                'updated_at' => now(),
-            ]);
+            $anterior = $paquete->toArray();
+
+            $paquete->update(['estado' => $nuevoEstado]);
+            $paquete->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'paquetes',
-                'registro_id' => $paqueteId,
-                'datos_anteriores' => (array) $actual,
-                'datos_nuevos' => (array) DB::table('paquetes')->find($paqueteId),
+                'registro_id' => $paquete->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $paquete->toArray(),
             ]);
         });
     }
 
-    public function eliminar(int $paqueteId, ?int $empleadoId = null): void
+    public function eliminar(Paquete $paquete, ?int $empleadoId = null): void
     {
-        DB::transaction(function () use ($paqueteId, $empleadoId): void {
-            $actual = DB::table('paquetes')->find($paqueteId);
-
-            if (! $actual) {
-                throw new DomainException('El paquete no existe.');
-            }
-
-            $tieneVentas = DB::table('ventas')->where('paquete_id', $paqueteId)->exists();
-            $tienePresupuestos = DB::table('presupuestos')->where('paquete_id', $paqueteId)->exists();
+        DB::transaction(function () use ($paquete, $empleadoId): void {
+            $tieneVentas = Venta::query()->where('paquete_id', $paquete->id)->exists();
+            $tienePresupuestos = Presupuesto::query()->where('paquete_id', $paquete->id)->exists();
 
             if ($tieneVentas || $tienePresupuestos) {
                 throw new DomainException('No se puede eliminar el paquete porque está vinculado a ventas o cotizaciones.');
             }
 
-            // Los paquete_servicios se eliminan por cascadeOnDelete en la migración
-            DB::table('paquetes')->where('id', $paqueteId)->delete();
+            $anterior = $paquete->toArray();
+
+            $paquete->delete();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'eliminar',
                 'tabla' => 'paquetes',
-                'registro_id' => $paqueteId,
-                'datos_anteriores' => (array) $actual,
+                'registro_id' => $paquete->id,
+                'datos_anteriores' => $anterior,
             ]);
         });
     }
 
+    private function tieneServicios(Paquete $paquete): bool
+    {
+        return PaqueteServicio::query()->where('paquete_id', $paquete->id)->exists();
+    }
+
     private function sincronizarServicios(int $paqueteId, array $servicios): void
     {
-        DB::table('paquete_servicios')->where('paquete_id', $paqueteId)->delete();
+        PaqueteServicio::query()->where('paquete_id', $paqueteId)->delete();
 
         if (empty($servicios)) {
             return;
@@ -299,6 +288,6 @@ class PaqueteService
             ];
         }
 
-        DB::table('paquete_servicios')->insert(array_values($items));
+        PaqueteServicio::insert(array_values($items));
     }
 }

@@ -3,7 +3,9 @@
 namespace App\Service\Clientes;
 
 use App\Models\Cliente;
+use App\Models\Prospecto;
 use App\Models\Sucursal;
+use App\Models\Venta;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
@@ -144,13 +146,13 @@ class ClienteService
 
     public function siguienteCodigo(): string
     {
-        return GeneradorCodigoService::siguiente('clientes', 'CLI-');
+        return GeneradorCodigoService::siguiente(Cliente::class, 'CLI-');
     }
 
     private function tieneRegistrosRelacionados(Cliente $cliente): bool
     {
-        return DB::table('ventas')->where('cliente_id', $cliente->id)->exists()
+        return Venta::query()->where('cliente_id', $cliente->id)->exists()
             || DB::table('venta_viajeros')->where('cliente_id', $cliente->id)->exists()
-            || DB::table('prospectos')->where('cliente_id', $cliente->id)->exists();
+            || Prospecto::query()->where('cliente_id', $cliente->id)->exists();
     }
 }

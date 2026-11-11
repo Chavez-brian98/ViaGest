@@ -2,11 +2,11 @@
 
 namespace App\Service\Configuracion;
 
+use App\Models\ConfiguracionEmpresa;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Shared\GestorArchivosService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -64,10 +64,10 @@ class ConfiguracionService
             return self::$cache = (object) self::DEFAULTS;
         }
 
-        $registro = DB::table('configuracion_empresa')->where('id', 1)->first();
+        $registro = ConfiguracionEmpresa::query()->find(1);
         $datos = array_merge(
             self::DEFAULTS,
-            array_filter((array) ($registro ?? []), fn ($valor) => $valor !== null),
+            array_filter($registro?->getAttributes() ?? [], fn ($valor) => $valor !== null),
         );
 
         return self::$cache = (object) $datos;
@@ -128,15 +128,15 @@ class ConfiguracionService
             );
         }
 
-        $datos['updated_at'] = now();
+        $configuracion = ConfiguracionEmpresa::query()->find(1);
 
-        $existe = DB::table('configuracion_empresa')->where('id', 1)->exists();
-
-        if (! $existe) {
-            $datos['created_at'] = now();
+        if (! $configuracion) {
+            $configuracion = new ConfiguracionEmpresa;
+            $configuracion->id = 1;
         }
 
-        DB::table('configuracion_empresa')->updateOrInsert(['id' => 1], $datos);
+        $configuracion->fill($datos);
+        $configuracion->save();
 
         self::limpiarCache();
 

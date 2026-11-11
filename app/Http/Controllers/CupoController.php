@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Cupos\CupoEstadoRequest;
 use App\Http\Requests\Cupos\CupoRequest;
+use App\Models\Cupo;
 use App\Service\Cupos\CupoService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CupoController extends Controller
@@ -77,23 +77,15 @@ class CupoController extends Controller
         }
     }
 
-    public function edit(int $cupo): View
+    public function edit(Cupo $cupo): View
     {
-        $registro = DB::table('cupos')->find($cupo);
-
-        if (! $registro) {
-            abort(404);
-        }
-
-        $registro->exists = true;
-
         return view('cupos.edit', [
-            'cupo' => $registro,
-            'servicios' => $this->cupoService->serviciosParaSeleccion((int) $registro->servicio_id),
+            'cupo' => $cupo,
+            'servicios' => $this->cupoService->serviciosParaSeleccion((int) $cupo->servicio_id),
         ]);
     }
 
-    public function update(CupoRequest $request, int $cupo): RedirectResponse
+    public function update(CupoRequest $request, Cupo $cupo): RedirectResponse
     {
         try {
             $this->cupoService->actualizar($cupo, $request->validated());
@@ -106,7 +98,7 @@ class CupoController extends Controller
         }
     }
 
-    public function actualizarEstado(CupoEstadoRequest $request, int $cupo): RedirectResponse|JsonResponse
+    public function actualizarEstado(CupoEstadoRequest $request, Cupo $cupo): RedirectResponse|JsonResponse
     {
         $estadoDestino = (string) $request->validated('estado_destino');
 
@@ -129,7 +121,7 @@ class CupoController extends Controller
         }
     }
 
-    public function destroy(int $cupo): RedirectResponse
+    public function destroy(Cupo $cupo): RedirectResponse
     {
         try {
             $this->cupoService->eliminar($cupo);

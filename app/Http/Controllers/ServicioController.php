@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Servicios\ServicioEstadoRequest;
 use App\Http\Requests\Servicios\ServicioRequest;
+use App\Models\Servicio;
 use App\Service\Servicios\ServicioService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ServicioController extends Controller
@@ -83,24 +83,16 @@ class ServicioController extends Controller
         }
     }
 
-    public function edit(int $servicio): View
+    public function edit(Servicio $servicio): View
     {
-        $registro = DB::table('servicios')->find($servicio);
-
-        if (! $registro) {
-            abort(404);
-        }
-
-        $registro->exists = true;
-
         return view('servicios.edit', [
-            'servicio' => $registro,
-            'proveedores' => $this->servicioService->proveedoresParaSeleccion((int) $registro->proveedor_id),
+            'servicio' => $servicio,
+            'proveedores' => $this->servicioService->proveedoresParaSeleccion($servicio->proveedor_id),
             'ciudades' => $this->servicioService->ciudadesParaSeleccion(),
         ]);
     }
 
-    public function update(ServicioRequest $request, int $servicio): RedirectResponse
+    public function update(ServicioRequest $request, Servicio $servicio): RedirectResponse
     {
         try {
             $this->servicioService->actualizar($servicio, $request->validated());
@@ -113,7 +105,7 @@ class ServicioController extends Controller
         }
     }
 
-    public function actualizarEstado(ServicioEstadoRequest $request, int $servicio): RedirectResponse|JsonResponse
+    public function actualizarEstado(ServicioEstadoRequest $request, Servicio $servicio): RedirectResponse|JsonResponse
     {
         $estadoDestino = (string) $request->validated('estado_destino');
 
@@ -136,7 +128,7 @@ class ServicioController extends Controller
         }
     }
 
-    public function destroy(int $servicio): RedirectResponse
+    public function destroy(Servicio $servicio): RedirectResponse
     {
         try {
             $this->servicioService->eliminar($servicio);

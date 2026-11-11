@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Paquetes\PaqueteEstadoRequest;
 use App\Http\Requests\Paquetes\PaqueteRequest;
+use App\Models\Paquete;
 use App\Service\Paquetes\PaqueteService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PaqueteController extends Controller
@@ -92,29 +92,21 @@ class PaqueteController extends Controller
         }
     }
 
-    public function edit(int $paquete): View
+    public function edit(Paquete $paquete): View
     {
-        $registro = DB::table('paquetes')->find($paquete);
-
-        if (! $registro) {
-            abort(404);
-        }
-
-        $registro->exists = true;
-
         $serviciosAsignados = old('servicios') !== null
             ? collect(old('servicios', []))
-            : $this->paqueteService->obtenerServiciosDePaquete($paquete);
+            : $this->paqueteService->obtenerServiciosDePaquete($paquete->id);
 
         return view('paquetes.edit', [
-            'paquete' => $registro,
+            'paquete' => $paquete,
             'ciudades' => $this->paqueteService->ciudadesParaSeleccion(),
             'serviciosDisponibles' => $this->paqueteService->serviciosDisponiblesParaPaquete(),
             'serviciosAsignados' => $serviciosAsignados,
         ]);
     }
 
-    public function update(PaqueteRequest $request, int $paquete): RedirectResponse
+    public function update(PaqueteRequest $request, Paquete $paquete): RedirectResponse
     {
         try {
             $this->paqueteService->actualizar($paquete, $request->validated());
@@ -127,7 +119,7 @@ class PaqueteController extends Controller
         }
     }
 
-    public function actualizarEstado(PaqueteEstadoRequest $request, int $paquete): RedirectResponse|JsonResponse
+    public function actualizarEstado(PaqueteEstadoRequest $request, Paquete $paquete): RedirectResponse|JsonResponse
     {
         $estadoDestino = (string) $request->validated('estado_destino');
 
@@ -150,7 +142,7 @@ class PaqueteController extends Controller
         }
     }
 
-    public function destroy(int $paquete): RedirectResponse
+    public function destroy(Paquete $paquete): RedirectResponse
     {
         try {
             $this->paqueteService->eliminar($paquete);

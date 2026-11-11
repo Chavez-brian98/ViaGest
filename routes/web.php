@@ -4,11 +4,13 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\auth\LoginController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CupoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\PaqueteController;
 use App\Http\Controllers\PerfilController;
+use App\Http\Controllers\ProspectoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\ServicioController;
@@ -63,6 +65,14 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('clientes', ClienteController::class)->except(['show']);
     Route::resource('empleados', EmpleadoController::class)->except(['show']);
+
+    Route::resource('prospectos', ProspectoController::class)->except(['show'])->parameters(['prospectos' => 'prospecto']);
+    Route::patch('prospectos/{prospecto}/estado', [ProspectoController::class, 'actualizarEstado'])->name('prospectos.estado');
+    Route::post('prospectos/{prospecto}/convertir', [ProspectoController::class, 'convertir'])->name('prospectos.convertir');
+
+    Route::get('cotizaciones/servicios-paquete/{paquete}', [CotizacionController::class, 'serviciosPaquete'])->name('cotizaciones.servicios-paquete');
+    Route::resource('cotizaciones', CotizacionController::class)->except(['show'])->parameters(['cotizaciones' => 'cotizacion']);
+    Route::patch('cotizaciones/{cotizacion}/estado', [CotizacionController::class, 'actualizarEstado'])->name('cotizaciones.estado');
 
     Route::middleware('permiso:roles_permisos,ver')->group(function () {
         Route::resource('roles', RolController::class)->except(['show', 'edit']);

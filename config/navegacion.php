@@ -8,7 +8,7 @@ return [
             'items' => [
                 ['label' => 'Dashboard', 'icono' => 'home', 'ruta' => 'dashboard'],
                 ['label' => 'Ventas', 'icono' => 'ticket', 'ruta' => null],
-                ['label' => 'Cotizaciones', 'icono' => 'document', 'ruta' => null],
+                ['label' => 'Cotizaciones', 'icono' => 'document', 'ruta' => 'cotizaciones.index'],
             ],
         ],
         [
@@ -24,7 +24,7 @@ return [
             'titulo' => 'Clientes',
             'items' => [
                 ['label' => 'Clientes', 'icono' => 'users', 'ruta' => 'clientes.index'],
-                ['label' => 'Prospectos', 'icono' => 'sparkles', 'ruta' => null],
+                ['label' => 'Prospectos', 'icono' => 'sparkles', 'ruta' => 'prospectos.index'],
             ],
         ],
         [

@@ -221,7 +221,7 @@
                     id="vigente_desde"
                     name="vigente_desde"
                     type="date"
-                    value="{{ old('vigente_desde', $servicio->vigente_desde) }}"
+                    value="{{ old('vigente_desde', $servicio->vigente_desde?->format('Y-m-d')) }}"
                     class="{{ $inputBase }} {{ $errors->has('vigente_desde') ? $inputError : $inputNormal }}"
                 >
                 @error('vigente_desde')
@@ -235,7 +235,7 @@
                     id="vigente_hasta"
                     name="vigente_hasta"
                     type="date"
-                    value="{{ old('vigente_hasta', $servicio->vigente_hasta) }}"
+                    value="{{ old('vigente_hasta', $servicio->vigente_hasta?->format('Y-m-d')) }}"
                     class="{{ $inputBase }} {{ $errors->has('vigente_hasta') ? $inputError : $inputNormal }}"
                 >
                 @error('vigente_hasta')

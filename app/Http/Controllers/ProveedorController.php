@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Proveedores\ProveedorEstadoRequest;
 use App\Http\Requests\Proveedores\ProveedorRequest;
+use App\Models\Proveedor;
 use App\Service\Proveedores\ProveedorService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProveedorController extends Controller
@@ -77,20 +77,12 @@ class ProveedorController extends Controller
         }
     }
 
-    public function edit(int $proveedor): View
+    public function edit(Proveedor $proveedor): View
     {
-        $registro = DB::table('proveedores')->find($proveedor);
-
-        if (! $registro) {
-            abort(404);
-        }
-
-        $registro->exists = true;
-
-        return view('proveedores.edit', ['proveedor' => $registro]);
+        return view('proveedores.edit', ['proveedor' => $proveedor]);
     }
 
-    public function update(ProveedorRequest $request, int $proveedor): RedirectResponse
+    public function update(ProveedorRequest $request, Proveedor $proveedor): RedirectResponse
     {
         try {
             $this->proveedorService->actualizar($proveedor, $request->validated());
@@ -103,7 +95,7 @@ class ProveedorController extends Controller
         }
     }
 
-    public function actualizarEstado(ProveedorEstadoRequest $request, int $proveedor): RedirectResponse|JsonResponse
+    public function actualizarEstado(ProveedorEstadoRequest $request, Proveedor $proveedor): RedirectResponse|JsonResponse
     {
         $estadoDestino = (string) $request->validated('estado_destino');
 
@@ -126,7 +118,7 @@ class ProveedorController extends Controller
         }
     }
 
-    public function destroy(int $proveedor): RedirectResponse
+    public function destroy(Proveedor $proveedor): RedirectResponse
     {
         try {
             $this->proveedorService->eliminar($proveedor);

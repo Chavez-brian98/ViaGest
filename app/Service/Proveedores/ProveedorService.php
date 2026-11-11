@@ -2,6 +2,11 @@
 
 namespace App\Service\Proveedores;
 
+use App\Models\Comision;
+use App\Models\CuentaPagar;
+use App\Models\GuiaAgenda;
+use App\Models\Proveedor;
+use App\Models\Servicio;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
@@ -14,7 +19,7 @@ class ProveedorService
 
     public function obtenerPaginado(array $filtros, int $porPagina = self::POR_PAGINA): LengthAwarePaginator
     {
-        $query = DB::table('proveedores');
+        $query = Proveedor::query();
 
         $buscar = trim((string) ($filtros['buscar'] ?? ''));
 
@@ -45,129 +50,107 @@ class ProveedorService
             ->withQueryString();
     }
 
-    public function crear(array $datos, ?int $empleadoId = null): int
+    public function crear(array $datos, ?int $empleadoId = null): Proveedor
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
             $datos['dias_credito'] ??= 0;
-            $datos['created_at'] = now();
-            $datos['updated_at'] = now();
 
-            $proveedorId = DB::table('proveedores')->insertGetId($datos);
+            $proveedor = Proveedor::create($datos);
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'crear',
                 'tabla' => 'proveedores',
-                'registro_id' => $proveedorId,
-                'datos_nuevos' => (array) DB::table('proveedores')->find($proveedorId),
+                'registro_id' => $proveedor->id,
+                'datos_nuevos' => $proveedor->toArray(),
             ]);
 
-            return $proveedorId;
+            return $proveedor;
         });
     }
 
-    public function actualizar(int $id, array $datos, ?int $empleadoId = null): void
+    public function actualizar(Proveedor $proveedor, array $datos, ?int $empleadoId = null): Proveedor
     {
-        DB::transaction(function () use ($id, $datos, $empleadoId): void {
-            $anterior = DB::table('proveedores')->find($id);
-
-            if (! $anterior) {
-                throw new DomainException('El proveedor no existe.');
-            }
+        return DB::transaction(function () use ($proveedor, $datos, $empleadoId) {
+            $anterior = $proveedor->toArray();
 
             $datos['dias_credito'] ??= 0;
-            $datos['updated_at'] = now();
 
-            DB::table('proveedores')->where('id', $id)->update($datos);
-
-            AuditoriaService::registrar([
-                'empleado_id' => $empleadoId,
-                'accion' => 'actualizar',
-                'tabla' => 'proveedores',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $anterior,
-                'datos_nuevos' => (array) DB::table('proveedores')->find($id),
-            ]);
-        });
-    }
-
-    public function cambiarEstado(int $id, string $estadoDestino, ?int $empleadoId = null): void
-    {
-        DB::transaction(function () use ($id, $estadoDestino, $empleadoId): void {
-            $anterior = DB::table('proveedores')->find($id);
-
-            if (! $anterior) {
-                throw new DomainException('El proveedor no existe.');
-            }
-
-            DB::table('proveedores')->where('id', $id)->update([
-                'estado' => $estadoDestino,
-                'updated_at' => now(),
-            ]);
+            $proveedor->update($datos);
+            $proveedor->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'proveedores',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $anterior,
-                'datos_nuevos' => (array) DB::table('proveedores')->find($id),
+                'registro_id' => $proveedor->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $proveedor->toArray(),
             ]);
+
+            return $proveedor;
         });
     }
 
-    public function eliminar(int $id, ?int $empleadoId = null): void
+    public function cambiarEstado(Proveedor $proveedor, string $estadoDestino, ?int $empleadoId = null): Proveedor
     {
-        DB::transaction(function () use ($id, $empleadoId): void {
-            $proveedor = DB::table('proveedores')->find($id);
+        return DB::transaction(function () use ($proveedor, $estadoDestino, $empleadoId) {
+            $anterior = $proveedor->toArray();
 
-            if (! $proveedor) {
-                throw new DomainException('El proveedor no existe.');
-            }
+            $proveedor->update(['estado' => $estadoDestino]);
+            $proveedor->refresh();
 
+            AuditoriaService::registrar([
+                'empleado_id' => $empleadoId,
+                'accion' => 'actualizar',
+                'tabla' => 'proveedores',
+                'registro_id' => $proveedor->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $proveedor->toArray(),
+            ]);
+
+            return $proveedor;
+        });
+    }
+
+    public function eliminar(Proveedor $proveedor, ?int $empleadoId = null): void
+    {
+        DB::transaction(function () use ($proveedor, $empleadoId): void {
             if ($proveedor->estado === 'activo') {
                 throw new DomainException('No se puede eliminar un proveedor activo. Desactívelo primero.');
             }
 
-            if ($this->tieneRegistrosRelacionados($id)) {
+            if ($this->tieneRegistrosRelacionados($proveedor)) {
                 throw new DomainException('No se puede eliminar el proveedor porque tiene servicios u otros registros asociados.');
             }
 
-            DB::table('proveedores')->where('id', $id)->delete();
+            $anterior = $proveedor->toArray();
+
+            $proveedor->delete();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'eliminar',
                 'tabla' => 'proveedores',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $proveedor,
+                'registro_id' => $proveedor->id,
+                'datos_anteriores' => $anterior,
             ]);
         });
     }
 
     public function generarCodigoSugerido(): string
     {
-        return GeneradorCodigoService::siguiente('proveedores', 'PROV-');
+        return GeneradorCodigoService::siguiente(Proveedor::class, 'PROV-');
     }
 
-    private function tieneRegistrosRelacionados(int $id): bool
+    private function tieneRegistrosRelacionados(Proveedor $proveedor): bool
     {
-        $referencias = [
-            ['servicios', 'proveedor_id'],
-            ['cuentas_por_pagar', 'proveedor_id'],
-            ['comisiones', 'proveedor_id'],
-            ['guia_idiomas', 'guia_id'],
-            ['guia_especialidades', 'guia_id'],
-            ['guia_agenda', 'guia_id'],
-        ];
-
-        foreach ($referencias as [$tabla, $columna]) {
-            if (DB::table($tabla)->where($columna, $id)->exists()) {
-                return true;
-            }
-        }
-
-        return false;
+        return Servicio::query()->where('proveedor_id', $proveedor->id)->exists()
+            || CuentaPagar::query()->where('proveedor_id', $proveedor->id)->exists()
+            || Comision::query()->where('proveedor_id', $proveedor->id)->exists()
+            || GuiaAgenda::query()->where('guia_id', $proveedor->id)->exists()
+            || DB::table('guia_idiomas')->where('guia_id', $proveedor->id)->exists()
+            || DB::table('guia_especialidades')->where('guia_id', $proveedor->id)->exists();
     }
 }

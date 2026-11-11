@@ -2,6 +2,9 @@
 
 namespace App\Service\Cupos;
 
+use App\Models\Cupo;
+use App\Models\Servicio;
+use App\Models\VentaServicio;
 use App\Service\Auditoria\AuditoriaService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -14,18 +17,18 @@ class CupoService
 
     public function obtenerPaginado(array $filtros, int $porPagina = self::POR_PAGINA): LengthAwarePaginator
     {
-        $query = DB::table('cupos as c')
-            ->join('servicios as s', 's.id', '=', 'c.servicio_id')
+        $query = Cupo::query()
+            ->join('servicios as s', 's.id', '=', 'cupos.servicio_id')
             ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
-            ->leftJoin('v_cupos_disponibles as vd', 'vd.cupo_id', '=', 'c.id')
+            ->leftJoin('v_cupos_disponibles as vd', 'vd.cupo_id', '=', 'cupos.id')
             ->select(
-                'c.*',
+                'cupos.*',
                 's.codigo as servicio_codigo',
                 's.nombre as servicio_nombre',
                 's.tipo as servicio_tipo',
                 'p.nombre as proveedor_nombre',
                 DB::raw('COALESCE(vd.vendido, 0) as vendido'),
-                DB::raw('COALESCE(vd.disponible, c.cantidad_total) as disponible')
+                DB::raw('COALESCE(vd.disponible, cupos.cantidad_total) as disponible')
             );
 
         $buscar = trim((string) ($filtros['buscar'] ?? ''));
@@ -40,78 +43,69 @@ class CupoService
         }
 
         if (! empty($filtros['tipo'])) {
-            $query->where('c.tipo', $filtros['tipo']);
+            $query->where('cupos.tipo', $filtros['tipo']);
         }
 
         if (! empty($filtros['estado'])) {
-            $query->where('c.estado', $filtros['estado']);
+            $query->where('cupos.estado', $filtros['estado']);
         }
 
         if (! empty($filtros['servicio_id'])) {
-            $query->where('c.servicio_id', (int) $filtros['servicio_id']);
+            $query->where('cupos.servicio_id', (int) $filtros['servicio_id']);
         }
 
         return $query
-            ->orderByDesc('c.fecha_inicio')
-            ->orderBy('c.id', 'desc')
+            ->orderByDesc('cupos.fecha_inicio')
+            ->orderBy('cupos.id', 'desc')
             ->paginate($porPagina)
             ->withQueryString();
     }
 
     public function serviciosParaSeleccion(?int $actualId = null): Collection
     {
-        return DB::table('servicios as s')
-            ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
+        return Servicio::query()
+            ->leftJoin('proveedores as p', 'p.id', '=', 'servicios.proveedor_id')
             ->where(function ($query) use ($actualId): void {
-                $query->where('s.estado', 'activo');
+                $query->where('servicios.estado', 'activo');
 
                 if ($actualId !== null) {
-                    $query->orWhere('s.id', $actualId);
+                    $query->orWhere('servicios.id', $actualId);
                 }
             })
-            ->orderBy('s.nombre')
+            ->orderBy('servicios.nombre')
             ->get([
-                's.id',
-                's.codigo',
-                's.nombre',
-                's.tipo',
+                'servicios.id',
+                'servicios.codigo',
+                'servicios.nombre',
+                'servicios.tipo',
                 'p.nombre as proveedor_nombre',
             ]);
     }
 
-    public function crear(array $datos, ?int $empleadoId = null): int
+    public function crear(array $datos, ?int $empleadoId = null): Cupo
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
-            $datos['created_at'] = now();
-            $datos['updated_at'] = now();
 
-            $cupoId = DB::table('cupos')->insertGetId($datos);
+            $cupo = Cupo::create($datos);
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'crear',
                 'tabla' => 'cupos',
-                'registro_id' => $cupoId,
-                'datos_nuevos' => (array) DB::table('cupos')->find($cupoId),
+                'registro_id' => $cupo->id,
+                'datos_nuevos' => $cupo->toArray(),
             ]);
 
-            return $cupoId;
+            return $cupo;
         });
     }
 
-    public function actualizar(int $cupoId, array $datos, ?int $empleadoId = null): void
+    public function actualizar(Cupo $cupo, array $datos, ?int $empleadoId = null): Cupo
     {
-        DB::transaction(function () use ($cupoId, $datos, $empleadoId): void {
-            $actual = DB::table('cupos')->find($cupoId);
-
-            if (! $actual) {
-                throw new DomainException('El cupo no existe.');
-            }
-
-            // Validar que la nueva cantidad total no sea menor que los cupos ya vendidos
-            $vendidos = (int) DB::table('venta_servicios')
-                ->where('cupo_id', $cupoId)
+        return DB::transaction(function () use ($cupo, $datos, $empleadoId) {
+            $vendidos = (int) VentaServicio::query()
+                ->where('cupo_id', $cupo->id)
                 ->where('estado', '<>', 'cancelado')
                 ->sum('cantidad');
 
@@ -121,85 +115,80 @@ class CupoService
 
             if ($vendidos > 0) {
                 foreach (['servicio_id', 'fecha_inicio', 'fecha_fin'] as $campo) {
-                    if (array_key_exists($campo, $datos) && (string) $datos[$campo] !== (string) $actual->{$campo}) {
+                    if (array_key_exists($campo, $datos) && (string) $datos[$campo] !== (string) $cupo->getRawOriginal($campo)) {
                         throw new DomainException('El cupo tiene ventas vinculadas, por lo que el servicio y las fechas de vigencia no pueden modificarse.');
                     }
                 }
             }
 
-            $datos['updated_at'] = now();
+            $anterior = $cupo->toArray();
 
-            DB::table('cupos')->where('id', $cupoId)->update($datos);
+            $cupo->update($datos);
+            $cupo->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'cupos',
-                'registro_id' => $cupoId,
-                'datos_anteriores' => (array) $actual,
-                'datos_nuevos' => (array) DB::table('cupos')->find($cupoId),
+                'registro_id' => $cupo->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $cupo->toArray(),
             ]);
+
+            return $cupo;
         });
     }
 
-    public function cambiarEstado(int $cupoId, string $nuevoEstado, ?int $empleadoId = null): void
+    public function cambiarEstado(Cupo $cupo, string $nuevoEstado, ?int $empleadoId = null): Cupo
     {
-        DB::transaction(function () use ($cupoId, $nuevoEstado, $empleadoId): void {
-            $actual = DB::table('cupos')->find($cupoId);
-
-            if (! $actual) {
-                throw new DomainException('El cupo no existe.');
-            }
-
+        return DB::transaction(function () use ($cupo, $nuevoEstado, $empleadoId) {
             if (! in_array($nuevoEstado, ['activo', 'liberado', 'cerrado'], true)) {
                 throw new DomainException('Estado no permitido.');
             }
 
-            if ($actual->estado === $nuevoEstado) {
-                return;
+            if ($cupo->estado === $nuevoEstado) {
+                return $cupo;
             }
 
-            DB::table('cupos')->where('id', $cupoId)->update([
-                'estado' => $nuevoEstado,
-                'updated_at' => now(),
-            ]);
+            $anterior = $cupo->toArray();
+
+            $cupo->update(['estado' => $nuevoEstado]);
+            $cupo->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'cupos',
-                'registro_id' => $cupoId,
-                'datos_anteriores' => (array) $actual,
-                'datos_nuevos' => (array) DB::table('cupos')->find($cupoId),
+                'registro_id' => $cupo->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $cupo->toArray(),
             ]);
+
+            return $cupo;
         });
     }
 
-    public function eliminar(int $cupoId, ?int $empleadoId = null): void
+    public function eliminar(Cupo $cupo, ?int $empleadoId = null): void
     {
-        DB::transaction(function () use ($cupoId, $empleadoId): void {
-            $actual = DB::table('cupos')->find($cupoId);
-
-            if (! $actual) {
-                throw new DomainException('El cupo no existe.');
-            }
-
-            $tieneVentas = DB::table('venta_servicios')
-                ->where('cupo_id', $cupoId)
+        DB::transaction(function () use ($cupo, $empleadoId): void {
+            $tieneVentas = VentaServicio::query()
+                ->where('cupo_id', $cupo->id)
                 ->exists();
 
             if ($tieneVentas) {
                 throw new DomainException('No se puede eliminar el cupo porque tiene ventas o reservas vinculadas.');
             }
 
-            DB::table('cupos')->where('id', $cupoId)->delete();
+            $anterior = $cupo->toArray();
+
+            $cupo->delete();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'eliminar',
                 'tabla' => 'cupos',
-                'registro_id' => $cupoId,
-                'datos_anteriores' => (array) $actual,
+                'registro_id' => $cupo->id,
+                'datos_anteriores' => $anterior,
             ]);
         });
     }

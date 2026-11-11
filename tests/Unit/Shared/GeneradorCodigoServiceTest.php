@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Shared;
 
+use App\Models\Proveedor;
 use App\Service\Shared\GeneradorCodigoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ class GeneradorCodigoServiceTest extends TestCase
 
     public function test_genera_primer_codigo_cuando_tabla_esta_vacia(): void
     {
-        $codigo = GeneradorCodigoService::siguiente('proveedores', 'PROV-');
+        $codigo = GeneradorCodigoService::siguiente(Proveedor::class, 'PROV-');
         $this->assertEquals('PROV-0001', $codigo);
     }
 
@@ -37,7 +38,7 @@ class GeneradorCodigoServiceTest extends TestCase
             'estado' => 'activo',
         ]);
 
-        $codigo = GeneradorCodigoService::siguiente('proveedores', 'PROV-');
+        $codigo = GeneradorCodigoService::siguiente(Proveedor::class, 'PROV-');
         $this->assertEquals('PROV-0003', $codigo);
     }
 
@@ -52,7 +53,7 @@ class GeneradorCodigoServiceTest extends TestCase
             'estado' => 'activo',
         ]);
 
-        $codigo = GeneradorCodigoService::siguiente('proveedores', 'PROV-');
+        $codigo = GeneradorCodigoService::siguiente(Proveedor::class, 'PROV-');
         $this->assertEquals('PROV-0006', $codigo);
     }
 }

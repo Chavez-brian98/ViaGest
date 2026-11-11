@@ -2,6 +2,12 @@
 
 namespace App\Service\Servicios;
 
+use App\Models\Ciudad;
+use App\Models\Cupo;
+use App\Models\PaqueteServicio;
+use App\Models\Proveedor;
+use App\Models\Servicio;
+use App\Models\VentaServicio;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
@@ -15,12 +21,12 @@ class ServicioService
 
     public function obtenerPaginado(array $filtros, int $porPagina = self::POR_PAGINA): LengthAwarePaginator
     {
-        $query = DB::table('servicios as s')
-            ->leftJoin('proveedores as p', 'p.id', '=', 's.proveedor_id')
-            ->leftJoin('ciudades as co', 'co.id', '=', 's.ciudad_origen_id')
-            ->leftJoin('ciudades as cd', 'cd.id', '=', 's.ciudad_destino_id')
+        $query = Servicio::query()
+            ->leftJoin('proveedores as p', 'p.id', '=', 'servicios.proveedor_id')
+            ->leftJoin('ciudades as co', 'co.id', '=', 'servicios.ciudad_origen_id')
+            ->leftJoin('ciudades as cd', 'cd.id', '=', 'servicios.ciudad_destino_id')
             ->select(
-                's.*',
+                'servicios.*',
                 'p.nombre as proveedor_nombre',
                 'co.nombre as origen_nombre',
                 'cd.nombre as destino_nombre',
@@ -31,33 +37,33 @@ class ServicioService
         if ($buscar !== '') {
             $like = '%'.$buscar.'%';
             $query->where(function ($q) use ($like): void {
-                $q->where('s.codigo', 'like', $like)
-                    ->orWhere('s.nombre', 'like', $like)
-                    ->orWhere('s.descripcion', 'like', $like);
+                $q->where('servicios.codigo', 'like', $like)
+                    ->orWhere('servicios.nombre', 'like', $like)
+                    ->orWhere('servicios.descripcion', 'like', $like);
             });
         }
 
         if (! empty($filtros['tipo'])) {
-            $query->where('s.tipo', $filtros['tipo']);
+            $query->where('servicios.tipo', $filtros['tipo']);
         }
 
         if (! empty($filtros['estado'])) {
-            $query->where('s.estado', $filtros['estado']);
+            $query->where('servicios.estado', $filtros['estado']);
         }
 
         if (! empty($filtros['proveedor_id'])) {
-            $query->where('s.proveedor_id', (int) $filtros['proveedor_id']);
+            $query->where('servicios.proveedor_id', (int) $filtros['proveedor_id']);
         }
 
         return $query
-            ->orderBy('s.nombre')
+            ->orderBy('servicios.nombre')
             ->paginate($porPagina)
             ->withQueryString();
     }
 
     public function proveedoresParaSeleccion(?int $actualId = null): Collection
     {
-        return DB::table('proveedores')
+        return Proveedor::query()
             ->where(function ($query) use ($actualId): void {
                 $query->where('estado', 'activo');
 
@@ -71,137 +77,114 @@ class ServicioService
 
     public function proveedoresParaFiltro(): Collection
     {
-        return DB::table('proveedores')
+        return Proveedor::query()
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'codigo']);
     }
 
     public function ciudadesParaSeleccion(): Collection
     {
-        return DB::table('ciudades')
+        return Ciudad::query()
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'pais_codigo']);
     }
 
-    public function crear(array $datos, ?int $empleadoId = null): int
+    public function crear(array $datos, ?int $empleadoId = null): Servicio
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
             $datos['unidad_cobro'] ??= 'por_persona';
-            $datos['created_at'] = now();
-            $datos['updated_at'] = now();
 
-            $servicioId = DB::table('servicios')->insertGetId($datos);
+            $servicio = Servicio::create($datos);
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'crear',
                 'tabla' => 'servicios',
-                'registro_id' => $servicioId,
-                'datos_nuevos' => (array) DB::table('servicios')->find($servicioId),
+                'registro_id' => $servicio->id,
+                'datos_nuevos' => $servicio->toArray(),
             ]);
 
-            return $servicioId;
+            return $servicio;
         });
     }
 
-    public function actualizar(int $id, array $datos, ?int $empleadoId = null): void
+    public function actualizar(Servicio $servicio, array $datos, ?int $empleadoId = null): Servicio
     {
-        DB::transaction(function () use ($id, $datos, $empleadoId): void {
-            $anterior = DB::table('servicios')->find($id);
+        return DB::transaction(function () use ($servicio, $datos, $empleadoId) {
+            $anterior = $servicio->toArray();
 
-            if (! $anterior) {
-                throw new DomainException('El servicio no existe.');
-            }
-
-            $datos['updated_at'] = now();
-
-            DB::table('servicios')->where('id', $id)->update($datos);
+            $servicio->update($datos);
+            $servicio->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'servicios',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $anterior,
-                'datos_nuevos' => (array) DB::table('servicios')->find($id),
+                'registro_id' => $servicio->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $servicio->toArray(),
             ]);
+
+            return $servicio;
         });
     }
 
-    public function cambiarEstado(int $id, string $estadoDestino, ?int $empleadoId = null): void
+    public function cambiarEstado(Servicio $servicio, string $estadoDestino, ?int $empleadoId = null): Servicio
     {
-        DB::transaction(function () use ($id, $estadoDestino, $empleadoId): void {
-            $anterior = DB::table('servicios')->find($id);
+        return DB::transaction(function () use ($servicio, $estadoDestino, $empleadoId) {
+            $anterior = $servicio->toArray();
 
-            if (! $anterior) {
-                throw new DomainException('El servicio no existe.');
-            }
-
-            DB::table('servicios')->where('id', $id)->update([
-                'estado' => $estadoDestino,
-                'updated_at' => now(),
-            ]);
+            $servicio->update(['estado' => $estadoDestino]);
+            $servicio->refresh();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'actualizar',
                 'tabla' => 'servicios',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $anterior,
-                'datos_nuevos' => (array) DB::table('servicios')->find($id),
+                'registro_id' => $servicio->id,
+                'datos_anteriores' => $anterior,
+                'datos_nuevos' => $servicio->toArray(),
             ]);
+
+            return $servicio;
         });
     }
 
-    public function eliminar(int $id, ?int $empleadoId = null): void
+    public function eliminar(Servicio $servicio, ?int $empleadoId = null): void
     {
-        DB::transaction(function () use ($id, $empleadoId): void {
-            $servicio = DB::table('servicios')->find($id);
-
-            if (! $servicio) {
-                throw new DomainException('El servicio no existe.');
-            }
-
+        DB::transaction(function () use ($servicio, $empleadoId): void {
             if ($servicio->estado === 'activo') {
                 throw new DomainException('No se puede eliminar un servicio activo. Desactívelo primero.');
             }
 
-            if ($this->tieneRegistrosRelacionados($id)) {
+            if ($this->tieneRegistrosRelacionados($servicio)) {
                 throw new DomainException('No se puede eliminar el servicio porque está asociado a paquetes, cupos o ventas.');
             }
 
-            DB::table('servicios')->where('id', $id)->delete();
+            $anterior = $servicio->toArray();
+
+            $servicio->delete();
 
             AuditoriaService::registrar([
                 'empleado_id' => $empleadoId,
                 'accion' => 'eliminar',
                 'tabla' => 'servicios',
-                'registro_id' => $id,
-                'datos_anteriores' => (array) $servicio,
+                'registro_id' => $servicio->id,
+                'datos_anteriores' => $anterior,
             ]);
         });
     }
 
     public function generarCodigoSugerido(): string
     {
-        return GeneradorCodigoService::siguiente('servicios', 'SRV-');
+        return GeneradorCodigoService::siguiente(Servicio::class, 'SRV-');
     }
 
-    private function tieneRegistrosRelacionados(int $id): bool
+    private function tieneRegistrosRelacionados(Servicio $servicio): bool
     {
-        $referencias = [
-            ['paquete_servicios', 'servicio_id'],
-            ['cupos', 'servicio_id'],
-            ['venta_servicios', 'servicio_id'],
-        ];
-
-        foreach ($referencias as [$tabla, $columna]) {
-            if (DB::table($tabla)->where($columna, $id)->exists()) {
-                return true;
-            }
-        }
-
-        return false;
+        return PaqueteServicio::query()->where('servicio_id', $servicio->id)->exists()
+            || Cupo::query()->where('servicio_id', $servicio->id)->exists()
+            || VentaServicio::query()->where('servicio_id', $servicio->id)->exists();
     }
 }

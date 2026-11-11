@@ -5,7 +5,7 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 ## Como funciona el proyecto (flujo de una peticion)
 
 - `routes/web.php` es la unica entrada web. `/` es el login (`GET` -> `login`, `POST` -> `login.store`, middleware `guest`); no existe `home`. Tras autenticar se redirige a `dashboard`. El grupo `auth` tiene: dashboard, perfil, clientes, empleados, proveedores, servicios, roles (protegido con `permiso:roles_permisos,ver`) y auditoria (protegido con `es_administrador`).
-- Pipeline por peticion: ruta + middleware -> **controlador delgado** -> **FormRequest** (normaliza y valida) -> **Service** (reglas de negocio, transacciones, auditoria) -> Eloquent / Query Builder -> vista Blade (`@extends('layouts.app')`).
+- Pipeline por peticion: ruta + middleware -> **controlador delgado** -> **FormRequest** (normaliza y valida) -> **Service** (reglas de negocio, transacciones, auditoria) -> **Eloquent** -> vista Blade (`@extends('layouts.app')`).
 - Ubicaciones y convenciones: controladores en `app/Http/Controllers` (login en `auth/`, minuscula), requests en `app/Http/Requests/<Modulo>`, logica en `app/Service/<Modulo>`, modelos en `app/Models`. Vistas por modulo en `resources/views/<modulo>/` con `index`/`create`/`edit` y parciales `_tabla`/`_form` reutilizados. Sigue ese patron antes de inventar otro.
 - Middleware: los alias se registran en `bootstrap/app.php` (estilo Laravel 11+, **no existe** `app/Http/Kernel.php`): `permiso:modulo,accion` (`VerificarPermiso`) y `es_administrador`. Ese archivo tambien define routing y manejo de excepciones.
 - Permisos: `Empleado::tienePermiso()` revisa primero overrides por empleado en `empleado_permisos` (`efecto` = `permitir`/`denegar`) y, si no hay override, hereda de `rol_permisos`. El rol llamado exactamente `administrador` tiene bypass total. Los modulos/acciones validos son `RolService::MODULOS_ETIQUETAS` y `RolService::ACCIONES`; si agregas un modulo, actualiza ambos y el enum de la migracion `empleado_permisos`. Hoy roles, configuracion (`ajustes_generales`) y auditoria exigen middleware; clientes, empleados, proveedores y servicios solo piden `auth`. El sidebar (`config/navegacion.php`) lista todo item con `ruta`; `ruta => null` se muestra como "Pronto" deshabilitado. Los items pueden declarar `permiso => [modulo, accion]` y se ocultan si el empleado no lo tiene.
@@ -24,9 +24,11 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 
 ## Modelos
 
-- Solo existen `Empleado` (Authenticatable), `Rol`, `Sucursal`, `Cliente` y `Auditoria` (mapea `bitacora_auditoria`, sin timestamps salvo `created_at`).
-- El resto de tablas **no tiene modelo**: usa `DB::table(...)` como ya se hace para `rol_permisos`/`empleado_permisos` (`Empleado`, `RolService`, `EmpleadoService`), proveedores/servicios (`ProveedorService`, `ServicioService`), dependencias de borrado y datos de dashboard. No crees un modelo por cada tabla sin necesidad.
-- Proveedores y servicios no usan route model binding: los controladores reciben `int $proveedor`/`int $servicio` y las rutas declaran `->parameters(['proveedores' => 'proveedor'])`/`['servicios' => 'servicio']`. Codigos sugeridos: `EMP-####`, `PROV-####`, `SRV-####`.
+- **Eloquent es el estandar del proyecto**: todo CRUD se hace con modelos en `app/Models`; no escribas con `DB::table(...)`. Hay un modelo por tabla: `Empleado` (Authenticatable), `Rol`, `Sucursal`, `Cliente`, `Proveedor`, `Servicio`, `Paquete`, `PaqueteServicio`, `Cupo`, `Prospecto`, `Presupuesto`, `PresupuestoServicio`, `Venta`, `VentaServicio`, `CuotaCobro`, `PagoCliente`, `CuentaPagar`, `ReglaComision`, `Comision`, `GuiaAgenda`, `Notificacion`, `NotificacionRegla`, `Ciudad`, `ConfiguracionEmpresa` (PK fija id=1, `$incrementing = false`) y `Auditoria` (mapea `bitacora_auditoria`, sin timestamps salvo `created_at`); cada modulo nuevo crea los modelos de sus tablas.
+- Al crear un modelo: declara `$table` si no coincide con el plural automatico, `$fillable` (o `$guarded = []`), `$casts` (DECIMAL -> `float`, ENUM -> `string`, fechas -> `date`) y `public $timestamps = false` si la tabla no tiene `created_at`/`updated_at` (sin timestamps: `rol_permisos`, `guia_idiomas`, `guia_especialidades`, `paquete_servicios`, `presupuesto_servicios`, `venta_servicios`, `venta_viajeros`, `notificaciones`).
+- Route model binding: los controladores reciben el modelo (`Paquete $paquete`) y la ruta resuelve `{paquete}` por convencion; declara `->parameters()` solo cuando el singular de Laravel rompe el espanol (p. ej. `Route::resource('proveedores')` genera `{proveedore}`). Los modulos existentes con `int $id` migran al tocarse.
+- Excepciones que siguen con Query Builder: tablas con PK compuesta (`empleado_permisos`, `rol_permisos`, `venta_viajeros`, `guia_idiomas`, `guia_especialidades`), las vistas `v_*` (agregados de solo lectura) y las queries analiticas de `DashboardService`.
+- Codigos sugeridos: `EMP-####`, `PROV-####`, `SRV-####`, `PAQ-####`.
 
 ## Entorno (bloqueante en esta maquina)
 
@@ -40,7 +42,7 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 
 - Instalar: `composer install`, `npm install`, `php artisan storage:link`.
 - BD: `php artisan migrate --seed` (o `migrate:fresh --seed`).
-- Tests: `composer test` (limpia config y corre la suite; hoy 132 tests en verde). Un test: `php artisan test --filter=<nombre>`.
+- Tests: `composer test` (limpia config y corre la suite; hoy 155 tests en verde). Un test: `php artisan test --filter=<nombre>`.
 - Formato: `vendor\bin\pint` en archivos tocados (`--test` solo verifica). No hay `pint.json`: corre con defaults.
 - Frontend: `npm run dev`, `npm run build`. **No hay** linter/formatter/typecheck JS ni CI (`.github` no existe).
 - `composer dev` = `php artisan dev` (sirve el stack completo).
@@ -76,4 +78,4 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 - **Responsivo**: movil, tablet y escritorio (`sm:`/`md:`/`lg:`); la card de login es la referencia visual.
 - **Profesional**: usa los tokens del tema, espaciado consistente, transiciones sutiles; evita estilos inline arbitrarios.
 - **UX/UI**: jerarquia clara, coherencia entre pantallas, accesibilidad (contraste, `aria-*`, labels, `autocomplete`, foco y errores).
-- **Backend limpio**: controlador delgado que solo orquesta, validacion/normalizacion en `FormRequest`, reglas en `app/Service`, Eloquent o Query Builder para datos; sin logica de negocio en la vista. Textos de UI en espanol.
+- **Backend limpio**: controlador delgado que solo orquesta, validacion/normalizacion en `FormRequest`, reglas en `app/Service`, Eloquent para datos (Query Builder solo en las excepciones de la seccion Modelos); sin logica de negocio en la vista. Textos de UI en espanol.

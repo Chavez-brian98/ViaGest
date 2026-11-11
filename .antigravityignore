@@ -1,0 +1,21 @@
+# Dependencias de Composer y NPM (Evita lecturas masivas)
+vendor/
+node_modules/
+
+# Archivos compilados, almacenamiento y caché de Laravel
+public/build/
+public/storage/
+storage/
+bootstrap/cache/
+*.log
+
+# Control de versiones y bases de datos locales
+.git/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env*
+
+# Documentaciones extensas de OpenAPI / Swagger (si están en el proyecto)
+# Excluye esquemas completos salvo cuando necesites trabajar en ellos
+docs/openapi.yaml

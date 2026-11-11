@@ -4,8 +4,6 @@
         const filtros = document.querySelectorAll('[data-filtro]');
         const limpiarBtn = document.querySelector('[data-limpiar-filtros]');
         const tablaContainer = document.getElementById('empleadosTabla');
-        const estadoForms = document.querySelectorAll('[data-estado-form]');
-        const eliminarForms = document.querySelectorAll('[data-eliminar-empleado]');
 
         if (!buscarInput || !tablaContainer) return;
 
@@ -19,67 +17,26 @@
                 query.set('buscar', buscarInput.value);
             }
 
-            filtros.forEach(filtro => {
+            filtros.forEach((filtro) => {
                 if (filtro.value) {
                     query.set(filtro.name, filtro.value);
                 }
             });
 
             try {
+                tablaContainer.classList.add('opacity-50', 'pointer-events-none');
                 const response = await fetch(`${url.pathname}?${query.toString()}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 });
                 if (!response.ok) throw new Error('Error al cargar la tabla');
                 const html = await response.text();
                 tablaContainer.innerHTML = html;
-
-                // Re-inicializar eventos de la tabla cargada dinámicamente
-                initTablaEvents();
+                window.history.replaceState({}, '', `${url.pathname}?${query.toString()}`);
             } catch (error) {
                 console.error(error);
+            } finally {
+                tablaContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
-        };
-
-        const initTablaEvents = () => {
-            // Toggles de estado
-            document.querySelectorAll('[data-estado-form]').forEach(form => {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const formData = new FormData(form);
-                    try {
-                        const response = await fetch(form.action, {
-                            method: 'PATCH',
-                            body: formData,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        const data = await response.json();
-
-                        const fila = document.querySelector(`[data-fila-empleado="${form.dataset.actual}"]`); // Esto es un ejemplo, el controller devuelve el estado
-                        // Simplificado: recargar tabla para reflejar cambios
-                        fetchTabla();
-                    } catch (error) {
-                        console.error(error);
-                    }
-                });
-            });
-
-            // Confirmaciones de eliminación
-            document.querySelectorAll('[data-eliminar-empleado]').forEach(form => {
-                form.addEventListener('submit', (e) => {
-                    if (!confirm(`¿Está seguro de eliminar al empleado ${form.dataset.empleadoNombre}?`)) {
-                        e.preventDefault();
-                    }
-                });
-            });
-
-            // Modales de detalle
-            document.querySelectorAll('[data-modal-open]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const modalId = btn.dataset.modalOpen;
-                    const modal = document.getElementById(modalId);
-                    if (modal) modal.showModal();
-                });
-            });
         };
 
         buscarInput.addEventListener('input', () => {
@@ -87,7 +44,7 @@
             debounceTimer = setTimeout(() => fetchTabla(), 300);
         });
 
-        filtros.forEach(filtro => {
+        filtros.forEach((filtro) => {
             filtro.addEventListener('change', () => fetchTabla());
         });
 
@@ -96,24 +53,178 @@
             window.location.href = limpiarBtn.href;
         });
 
-        // Cierre delegado de modales (funciona también tras recargar la tabla)
-        document.addEventListener('click', (e) => {
-            const cerrar = e.target.closest('[data-modal-close]');
-            if (cerrar) {
-                cerrar.closest('dialog')?.close();
+        // Toggle de estado por AJAX
+        document.addEventListener('submit', async (e) => {
+            const formEstado = e.target.closest('[data-estado-form]');
+            if (!formEstado) return;
+
+            e.preventDefault();
+            const switchBtn = formEstado.querySelector('[data-estado-switch]');
+            const textoSpan = formEstado.querySelector('[data-estado-texto]');
+            const inputDestino = formEstado.querySelector('input[name="estado_destino"]');
+            const fila = formEstado.closest('tr');
+            const formEliminar = fila ? fila.querySelector('form[data-eliminar-empleado]') : null;
+
+            const estadoAnterior = formEstado.dataset.estadoActual;
+            const nuevoEstado = inputDestino ? inputDestino.value : (estadoAnterior === 'activo' ? 'inactivo' : 'activo');
+
+            try {
+                switchBtn?.setAttribute('disabled', 'true');
+                const res = await fetch(formEstado.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': formEstado.querySelector('input[name="_token"]')?.value || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        Accept: 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(new FormData(formEstado)).toString(),
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Ocurrió un error al actualizar el estado.');
+                    return;
+                }
+
+                formEstado.dataset.estadoActual = data.estado;
+                if (inputDestino) {
+                    inputDestino.value = data.estado === 'activo' ? 'inactivo' : 'activo';
+                }
+                if (switchBtn) {
+                    switchBtn.setAttribute('aria-checked', data.estado === 'activo' ? 'true' : 'false');
+                    switchBtn.title = data.estado === 'activo' ? 'Desactivar' : 'Activar';
+                }
+                if (textoSpan) {
+                    textoSpan.dataset.estado = data.estado;
+                    textoSpan.textContent = data.estado === 'activo' ? 'Activo' : 'Inactivo';
+                }
+                if (formEliminar) {
+                    if (data.estado === 'activo') {
+                        formEliminar.classList.add('hidden');
+                    } else {
+                        formEliminar.classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                switchBtn?.removeAttribute('disabled');
             }
         });
 
-        // Manejar envío de permisos de empleado por AJAX
+        // Confirmación de eliminación
+        document.addEventListener('submit', (e) => {
+            const formEliminar = e.target.closest('[data-eliminar-empleado]');
+            if (!formEliminar) return;
+
+            if (!confirm(`¿Está seguro de eliminar al empleado ${formEliminar.dataset.empleadoNombre}?`)) {
+                e.preventDefault();
+            }
+        });
+
+        // Apertura, cierre y backdrop de diálogos (delegado)
+        document.addEventListener('click', (e) => {
+            // Paginación AJAX
+            const linkPaginacion = e.target.closest('#empleadosTabla nav a');
+            if (linkPaginacion) {
+                e.preventDefault();
+                const href = linkPaginacion.getAttribute('href');
+                if (href) {
+                    const url = new URL(href, window.location.origin);
+                    const params = Object.fromEntries(url.searchParams.entries());
+                    fetchTabla(params);
+                }
+                return;
+            }
+
+            // Abrir modal
+            const btnOpen = e.target.closest('[data-modal-open]');
+            if (btnOpen) {
+                const modalId = btnOpen.getAttribute('data-modal-open');
+                const dialog = document.getElementById(modalId);
+                if (dialog && typeof dialog.showModal === 'function') {
+                    dialog.showModal();
+                }
+                return;
+            }
+
+            // Cerrar modal
+            const btnClose = e.target.closest('[data-modal-close]');
+            if (btnClose) {
+                const dialog = btnClose.closest('dialog');
+                if (dialog) dialog.close();
+                return;
+            }
+
+            // Cerrar al pulsar el backdrop
+            if (e.target.tagName === 'DIALOG' && e.target.hasAttribute('open')) {
+                const rect = e.target.getBoundingClientRect();
+                const isInDialog =
+                    rect.top <= e.clientY &&
+                    e.clientY <= rect.top + rect.height &&
+                    rect.left <= e.clientX &&
+                    e.clientX <= rect.left + rect.width;
+
+                if (!isInDialog) {
+                    e.target.close();
+                }
+            }
+        });
+
+        // -------------------------------------------------------------
+        // MATRIZ DE PERMISOS DENTRO DEL MODAL (empleados._permisos_dialog)
+        // -------------------------------------------------------------
+        document.addEventListener('click', (e) => {
+            // Marcar todos en modal específico
+            const btnMarcarTodoModal = e.target.closest('[data-marcar-todo-modal]');
+            if (btnMarcarTodoModal) {
+                const empId = btnMarcarTodoModal.dataset.marcarTodoModal;
+                document.querySelectorAll(`.checkbox-modal-empleado-${empId}`).forEach((cb) => (cb.checked = true));
+                return;
+            }
+
+            // Desmarcar todos en modal específico
+            const btnDesmarcarTodoModal = e.target.closest('[data-desmarcar-todo-modal]');
+            if (btnDesmarcarTodoModal) {
+                const empId = btnDesmarcarTodoModal.dataset.desmarcarTodoModal;
+                document.querySelectorAll(`.checkbox-modal-empleado-${empId}`).forEach((cb) => (cb.checked = false));
+                return;
+            }
+
+            // Marcar columna en modal específico
+            const btnColModal = e.target.closest('[data-columna-modal]');
+            if (btnColModal) {
+                const accion = btnColModal.dataset.columnaModal;
+                const empId = btnColModal.dataset.modalId;
+                const checkboxes = document.querySelectorAll(`.checkbox-modal-empleado-${empId}[data-accion="${accion}"]`);
+                const algunDesmarcado = Array.from(checkboxes).some((cb) => !cb.checked);
+                checkboxes.forEach((cb) => (cb.checked = algunDesmarcado));
+                return;
+            }
+
+            // Alternar fila en modal específico
+            const btnFilaModal = e.target.closest('[data-fila-modal]');
+            if (btnFilaModal) {
+                const modulo = btnFilaModal.dataset.filaModal;
+                const empId = btnFilaModal.dataset.modalId;
+                const checkboxes = document.querySelectorAll(`.checkbox-modal-empleado-${empId}[data-modulo="${modulo}"]`);
+                const algunDesmarcado = Array.from(checkboxes).some((cb) => !cb.checked);
+                checkboxes.forEach((cb) => (cb.checked = algunDesmarcado));
+                return;
+            }
+        });
+
+        // Guardar permisos de empleado vía AJAX desde el modal
         document.addEventListener('submit', async (e) => {
             const formPermisos = e.target.closest('[data-form-permisos-empleado]');
             if (!formPermisos) return;
 
             e.preventDefault();
             const submitBtn = formPermisos.querySelector('button[type="submit"]');
-            const empleadoId = formPermisos.dataset.empleadoId;
-            const statusSpan = formPermisos.querySelector(`[data-status-empleado-${empleadoId}]`);
-            const statusInicial = statusSpan?.textContent ?? '';
+            const empId = formPermisos.dataset.empleadoId;
+            const statusSpan = formPermisos.querySelector(`[data-status-guardado-${empId}]`);
+            const statusInicial = statusSpan ? statusSpan.textContent : '';
 
             try {
                 submitBtn?.setAttribute('disabled', 'true');
@@ -137,7 +248,7 @@
                 }
 
                 if (statusSpan) {
-                    statusSpan.textContent = '¡Sobreescrituras guardadas con éxito!';
+                    statusSpan.textContent = '¡Permisos guardados con éxito!';
                     statusSpan.classList.add('text-emerald-600', 'font-semibold');
                     setTimeout(() => {
                         statusSpan.textContent = statusInicial;
@@ -149,78 +260,9 @@
                 alert('Ocurrió un error inesperado al guardar los permisos.');
             } finally {
                 submitBtn?.removeAttribute('disabled');
-                if (submitBtn) submitBtn.textContent = 'Guardar sobreescrituras';
+                if (submitBtn) submitBtn.textContent = 'Guardar cambios';
             }
         });
-
-        const actualizarPermisoEfectivo = (sel) => {
-            const badge = sel.closest('td')?.querySelector('[data-permiso-efectivo]');
-            if (!badge) return;
-
-            const rolOtorga = sel.dataset.rolOtorga === '1';
-            const efectivo = sel.value === 'permitir' ? true : sel.value === 'denegar' ? false : rolOtorga;
-
-            badge.textContent = efectivo ? 'Emp ✓' : 'Emp ✗';
-            badge.classList.toggle('bg-emerald-100', efectivo);
-            badge.classList.toggle('text-emerald-800', efectivo);
-            badge.classList.toggle('bg-rose-100', !efectivo);
-            badge.classList.toggle('text-rose-800', !efectivo);
-        };
-
-        const actualizarContadores = (empId) => {
-            const dialog = document.getElementById(`empleado-permisos-${empId}`);
-            if (!dialog) return;
-
-            let totalRol = 0;
-            let totalEfectivo = 0;
-
-            dialog.querySelectorAll(`.select-override-${empId}`).forEach(sel => {
-                const rolOtorga = sel.dataset.rolOtorga === '1';
-                const efectivo = sel.value === 'permitir' ? true : sel.value === 'denegar' ? false : rolOtorga;
-
-                totalRol += rolOtorga ? 1 : 0;
-                totalEfectivo += efectivo ? 1 : 0;
-            });
-
-            const totalRolEl = dialog.querySelector(`[data-total-rol-${empId}]`);
-            const totalEfectivoEl = dialog.querySelector(`[data-total-efectivo-${empId}]`);
-            if (totalRolEl) totalRolEl.textContent = String(totalRol);
-            if (totalEfectivoEl) totalEfectivoEl.textContent = String(totalEfectivo);
-        };
-
-        // Restablecer overrides de empleado a nivel visual
-        document.addEventListener('click', (e) => {
-            const btnReset = e.target.closest('[data-reset-overrides]');
-            if (btnReset) {
-                const empId = btnReset.dataset.resetOverrides;
-                document.querySelectorAll(`.select-override-${empId}`).forEach(sel => {
-                    sel.value = '';
-                    sel.className = 'rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-' + empId + ' border-ink/15 bg-surface text-ink/70';
-                    actualizarPermisoEfectivo(sel);
-                });
-                actualizarContadores(empId);
-            }
-        });
-
-        // Cambiar estilo de color del select al cambiar opción
-        document.addEventListener('change', (e) => {
-            if (e.target.matches('[class*="select-override-"]')) {
-                const sel = e.target;
-                const empId = sel.className.match(/select-override-(\d+)/)?.[1] || '';
-                if (sel.value === 'permitir') {
-                    sel.className = `rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-${empId} border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold`;
-                } else if (sel.value === 'denegar') {
-                    sel.className = `rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-${empId} border-rose-300 bg-rose-50 text-rose-800 font-semibold`;
-                } else {
-                    sel.className = `rounded-lg border px-2 py-1 text-[11px] font-medium transition focus:outline-none focus:ring-2 focus:ring-secondary/30 select-override-${empId} border-ink/15 bg-surface text-ink/70`;
-                }
-
-                actualizarPermisoEfectivo(sel);
-                actualizarContadores(empId);
-            }
-        });
-
-        initTablaEvents();
     };
 
     document.addEventListener('DOMContentLoaded', init);
