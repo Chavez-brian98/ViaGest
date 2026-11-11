@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
+use App\Http\Requests\Servicios\ServicioEstadoRequest;
 use App\Http\Requests\Servicios\ServicioRequest;
 use App\Service\Servicios\ServicioService;
 use DomainException;
@@ -14,6 +16,8 @@ use Illuminate\View\View;
 
 class ServicioController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly ServicioService $servicioService) {}
 
     public function index(Request $request): View|Response
@@ -26,10 +30,7 @@ class ServicioController extends Controller
         ];
 
         $servicios = $this->servicioService->obtenerPaginado($filtros);
-        $parametrosListado = array_filter(
-            $filtros,
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros($filtros);
 
         if ($request->ajax()) {
             return response()->view('servicios._tabla', compact('servicios', 'parametrosListado'));
@@ -72,7 +73,7 @@ class ServicioController extends Controller
     public function store(ServicioRequest $request): RedirectResponse
     {
         try {
-            $this->servicioService->crear($request->validated(), (int) auth()->id());
+            $this->servicioService->crear($request->validated());
 
             return redirect()
                 ->route('servicios.index')
@@ -102,7 +103,7 @@ class ServicioController extends Controller
     public function update(ServicioRequest $request, int $servicio): RedirectResponse
     {
         try {
-            $this->servicioService->actualizar($servicio, $request->validated(), (int) auth()->id());
+            $this->servicioService->actualizar($servicio, $request->validated());
 
             return redirect()
                 ->route('servicios.index')
@@ -112,25 +113,23 @@ class ServicioController extends Controller
         }
     }
 
-    public function actualizarEstado(Request $request, int $servicio): RedirectResponse|JsonResponse
+    public function actualizarEstado(ServicioEstadoRequest $request, int $servicio): RedirectResponse|JsonResponse
     {
-        $request->validate(['estado_destino' => ['required', 'in:activo,inactivo']]);
+        $estadoDestino = (string) $request->validated('estado_destino');
 
         try {
-            $this->servicioService->cambiarEstado(
-                $servicio,
-                (string) $request->input('estado_destino'),
-                (int) auth()->id(),
-            );
+            $this->servicioService->cambiarEstado($servicio, $estadoDestino);
+
+            $mensaje = 'Estado actualizado correctamente.';
 
             if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => 'Estado actualizado correctamente.']);
+                return $this->respuestaJsonEstado($estadoDestino, $mensaje);
             }
 
-            return back()->with('success', 'Estado actualizado correctamente.');
+            return back()->with('success', $mensaje);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return back()->with('error', $e->getMessage());
@@ -140,7 +139,7 @@ class ServicioController extends Controller
     public function destroy(int $servicio): RedirectResponse
     {
         try {
-            $this->servicioService->eliminar($servicio, (int) auth()->id());
+            $this->servicioService->eliminar($servicio);
 
             return redirect()
                 ->route('servicios.index')

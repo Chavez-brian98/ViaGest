@@ -291,4 +291,88 @@ class PaqueteTest extends TestCase
         $response->assertRedirect(route('paquetes.index'));
         $this->assertDatabaseMissing('paquetes', ['id' => $paqueteId]);
     }
+
+    public function test_crear_paquete_activo_sin_servicios_es_rechazado(): void
+    {
+        $response = $this->actingAs($this->empleado)
+            ->post(route('paquetes.store'), [
+                'codigo' => 'PAQ-0006',
+                'nombre' => 'Paquete Sin Servicios',
+                'tipo' => 'nacional',
+                'duracion_dias' => 2,
+                'duracion_noches' => 1,
+                'margen_tipo' => 'porcentaje',
+                'margen_valor' => 15,
+                'estado' => 'activo',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertDatabaseMissing('paquetes', ['codigo' => 'PAQ-0006']);
+    }
+
+    public function test_actualizar_paquete_a_activo_sin_servicios_es_rechazado(): void
+    {
+        $paqueteId = DB::table('paquetes')->insertGetId([
+            'codigo' => 'PAQ-0007',
+            'nombre' => 'Paquete Borrador',
+            'tipo' => 'nacional',
+            'duracion_dias' => 2,
+            'duracion_noches' => 1,
+            'margen_tipo' => 'porcentaje',
+            'margen_valor' => 10,
+            'estado' => 'borrador',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->empleado)
+            ->put(route('paquetes.update', $paqueteId), [
+                'codigo' => 'PAQ-0007',
+                'nombre' => 'Paquete Borrador',
+                'tipo' => 'nacional',
+                'duracion_dias' => 2,
+                'duracion_noches' => 1,
+                'margen_tipo' => 'porcentaje',
+                'margen_valor' => 10,
+                'estado' => 'activo',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('paquetes', [
+            'id' => $paqueteId,
+            'estado' => 'borrador',
+        ]);
+    }
+
+    public function test_crear_paquete_con_servicios_duplicados_es_rechazado(): void
+    {
+        $response = $this->actingAs($this->empleado)
+            ->post(route('paquetes.store'), [
+                'codigo' => 'PAQ-0008',
+                'nombre' => 'Paquete Con Duplicados',
+                'tipo' => 'nacional',
+                'duracion_dias' => 2,
+                'duracion_noches' => 1,
+                'margen_tipo' => 'porcentaje',
+                'margen_valor' => 15,
+                'estado' => 'borrador',
+                'servicios' => [
+                    [
+                        'servicio_id' => $this->servicioId1,
+                        'dia_inicio' => 1,
+                        'cantidad' => 1,
+                    ],
+                    [
+                        'servicio_id' => $this->servicioId1,
+                        'dia_inicio' => 1,
+                        'cantidad' => 2,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('servicios');
+        $this->assertDatabaseMissing('paquetes', ['codigo' => 'PAQ-0008']);
+    }
 }

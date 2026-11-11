@@ -40,7 +40,7 @@ ERP interno de una agencia de viajes (Laravel 13, PHP ^8.3, Blade server-side, V
 
 - Instalar: `composer install`, `npm install`, `php artisan storage:link`.
 - BD: `php artisan migrate --seed` (o `migrate:fresh --seed`).
-- Tests: `composer test` (limpia config y corre la suite; hoy 109 tests en verde). Un test: `php artisan test --filter=<nombre>`.
+- Tests: `composer test` (limpia config y corre la suite; hoy 132 tests en verde). Un test: `php artisan test --filter=<nombre>`.
 - Formato: `vendor\bin\pint` en archivos tocados (`--test` solo verifica). No hay `pint.json`: corre con defaults.
 - Frontend: `npm run dev`, `npm run build`. **No hay** linter/formatter/typecheck JS ni CI (`.github` no existe).
 - `composer dev` = `php artisan dev` (sirve el stack completo).

@@ -3,16 +3,35 @@
 namespace App\Service\Configuracion;
 
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Shared\GestorArchivosService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 
 class ConfiguracionService
 {
     private const DISCO = 'public';
+
+    public const MONEDAS = [
+        'USD' => 'USD — Dólar estadounidense',
+        'EUR' => 'EUR — Euro',
+        'GTQ' => 'GTQ — Quetzal guatemalteco',
+        'HNL' => 'HNL — Lempira hondureño',
+        'NIO' => 'NIO — Córdoba nicaragüense',
+        'CRC' => 'CRC — Colón costarricense',
+        'PAB' => 'PAB — Balboa panameño',
+        'DOP' => 'DOP — Peso dominicano',
+        'MXN' => 'MXN — Peso mexicano',
+        'COP' => 'COP — Peso colombiano',
+        'PEN' => 'PEN — Sol peruano',
+        'CLP' => 'CLP — Peso chileno',
+        'ARS' => 'ARS — Peso argentino',
+        'BRL' => 'BRL — Real brasileño',
+        'CAD' => 'CAD — Dólar canadiense',
+        'GBP' => 'GBP — Libra esterlina',
+    ];
 
     private const DEFAULTS = [
         'nombre_comercial' => 'ViaGest',
@@ -100,18 +119,13 @@ class ConfiguracionService
 
         unset($datos['logo'], $datos['eliminar_logo']);
 
-        if ($logo) {
-            $ruta = $logo->store('configuracion', self::DISCO);
-
-            if (! is_string($ruta)) {
-                throw new RuntimeException('No se pudo guardar el logo de la empresa.');
-            }
-
-            $this->eliminarArchivo($anterior['logo_ruta'] ?? null);
-            $datos['logo_ruta'] = $ruta;
-        } elseif ($eliminarLogo) {
-            $this->eliminarArchivo($anterior['logo_ruta'] ?? null);
-            $datos['logo_ruta'] = null;
+        if ($logo || $eliminarLogo) {
+            $datos['logo_ruta'] = GestorArchivosService::reemplazar(
+                $logo,
+                $anterior['logo_ruta'] ?? null,
+                'configuracion',
+                $eliminarLogo
+            );
         }
 
         $datos['updated_at'] = now();
@@ -138,12 +152,5 @@ class ConfiguracionService
         ]);
 
         return self::actual();
-    }
-
-    private function eliminarArchivo(?string $ruta): void
-    {
-        if ($ruta && Storage::disk(self::DISCO)->exists($ruta)) {
-            Storage::disk(self::DISCO)->delete($ruta);
-        }
     }
 }

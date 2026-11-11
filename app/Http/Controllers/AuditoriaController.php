@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Service\Auditoria\AuditoriaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -9,6 +10,8 @@ use Illuminate\View\View;
 
 class AuditoriaController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly AuditoriaService $auditoriaService) {}
 
     public function index(Request $request): View|Response
@@ -20,10 +23,7 @@ class AuditoriaController extends Controller
         $modulos = $this->auditoriaService->modulosConRegistros();
         $empleados = $this->auditoriaService->empleadosParaFiltro();
 
-        $parametrosListado = array_filter(
-            ['buscar' => $buscar, ...$filtros],
-            fn ($v) => $v !== '',
-        );
+        $parametrosListado = $this->limpiarParametros(['buscar' => $buscar, ...$filtros]);
 
         if ($request->ajax()) {
             return response()->view('auditoria._tabla', compact(

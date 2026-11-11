@@ -5,6 +5,7 @@ namespace App\Service\Clientes;
 use App\Models\Cliente;
 use App\Models\Sucursal;
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -143,15 +144,7 @@ class ClienteService
 
     public function siguienteCodigo(): string
     {
-        $numero = ((int) Cliente::query()->max('id')) + 1;
-
-        do {
-            $codigo = 'CLI-'.str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
-            $existe = Cliente::query()->where('codigo', $codigo)->exists();
-            $numero++;
-        } while ($existe);
-
-        return $codigo;
+        return GeneradorCodigoService::siguiente('clientes', 'CLI-');
     }
 
     private function tieneRegistrosRelacionados(Cliente $cliente): bool

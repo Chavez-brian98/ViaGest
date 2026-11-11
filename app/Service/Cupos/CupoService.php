@@ -79,7 +79,7 @@ class CupoService
             ]);
     }
 
-    public function crear(array $datos, int $empleadoId): int
+    public function crear(array $datos, ?int $empleadoId = null): int
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
@@ -100,7 +100,7 @@ class CupoService
         });
     }
 
-    public function actualizar(int $cupoId, array $datos, int $empleadoId): void
+    public function actualizar(int $cupoId, array $datos, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($cupoId, $datos, $empleadoId): void {
             $actual = DB::table('cupos')->find($cupoId);
@@ -119,6 +119,14 @@ class CupoService
                 throw new DomainException("La cantidad total no puede ser inferior a la cantidad ya vendida ({$vendidos}).");
             }
 
+            if ($vendidos > 0) {
+                foreach (['servicio_id', 'fecha_inicio', 'fecha_fin'] as $campo) {
+                    if (array_key_exists($campo, $datos) && (string) $datos[$campo] !== (string) $actual->{$campo}) {
+                        throw new DomainException('El cupo tiene ventas vinculadas, por lo que el servicio y las fechas de vigencia no pueden modificarse.');
+                    }
+                }
+            }
+
             $datos['updated_at'] = now();
 
             DB::table('cupos')->where('id', $cupoId)->update($datos);
@@ -134,7 +142,7 @@ class CupoService
         });
     }
 
-    public function cambiarEstado(int $cupoId, string $nuevoEstado, int $empleadoId): void
+    public function cambiarEstado(int $cupoId, string $nuevoEstado, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($cupoId, $nuevoEstado, $empleadoId): void {
             $actual = DB::table('cupos')->find($cupoId);
@@ -167,7 +175,7 @@ class CupoService
         });
     }
 
-    public function eliminar(int $cupoId, int $empleadoId): void
+    public function eliminar(int $cupoId, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($cupoId, $empleadoId): void {
             $actual = DB::table('cupos')->find($cupoId);

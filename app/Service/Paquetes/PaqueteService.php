@@ -3,6 +3,7 @@
 namespace App\Service\Paquetes;
 
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -57,9 +58,7 @@ class PaqueteService
 
     public function generarCodigoSugerido(): string
     {
-        $ultimoId = (int) DB::table('paquetes')->max('id');
-
-        return sprintf('PAQ-%04d', $ultimoId + 1);
+        return GeneradorCodigoService::siguiente('paquetes', 'PAQ-');
     }
 
     public function ciudadesParaSeleccion(): Collection
@@ -146,7 +145,7 @@ class PaqueteService
             ->get();
     }
 
-    public function crear(array $datos, int $empleadoId): int
+    public function crear(array $datos, ?int $empleadoId = null): int
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $servicios = $datos['servicios'] ?? [];
@@ -155,6 +154,10 @@ class PaqueteService
             $datos['estado'] ??= 'borrador';
             $datos['created_at'] = now();
             $datos['updated_at'] = now();
+
+            if ($datos['estado'] === 'activo' && $servicios === []) {
+                throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
+            }
 
             $paqueteId = DB::table('paquetes')->insertGetId($datos);
 
@@ -172,7 +175,7 @@ class PaqueteService
         });
     }
 
-    public function actualizar(int $paqueteId, array $datos, int $empleadoId): void
+    public function actualizar(int $paqueteId, array $datos, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($paqueteId, $datos, $empleadoId): void {
             $actual = DB::table('paquetes')->find($paqueteId);
@@ -183,6 +186,12 @@ class PaqueteService
 
             $servicios = $datos['servicios'] ?? [];
             unset($datos['servicios']);
+
+            $estadoDestino = $datos['estado'] ?? $actual->estado;
+
+            if ($estadoDestino === 'activo' && $servicios === []) {
+                throw new DomainException('Para activar un paquete debes asociarle al menos un servicio turístico.');
+            }
 
             $datos['updated_at'] = now();
 
@@ -201,7 +210,7 @@ class PaqueteService
         });
     }
 
-    public function cambiarEstado(int $paqueteId, string $nuevoEstado, int $empleadoId): void
+    public function cambiarEstado(int $paqueteId, string $nuevoEstado, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($paqueteId, $nuevoEstado, $empleadoId): void {
             $actual = DB::table('paquetes')->find($paqueteId);
@@ -242,7 +251,7 @@ class PaqueteService
         });
     }
 
-    public function eliminar(int $paqueteId, int $empleadoId): void
+    public function eliminar(int $paqueteId, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($paqueteId, $empleadoId): void {
             $actual = DB::table('paquetes')->find($paqueteId);
@@ -281,7 +290,8 @@ class PaqueteService
 
         $items = [];
         foreach ($servicios as $s) {
-            $items[] = [
+            $clave = (int) $s['servicio_id'].'-'.(int) ($s['dia_inicio'] ?? 1);
+            $items[$clave] = [
                 'paquete_id' => $paqueteId,
                 'servicio_id' => (int) $s['servicio_id'],
                 'dia_inicio' => (int) ($s['dia_inicio'] ?? 1),
@@ -289,6 +299,6 @@ class PaqueteService
             ];
         }
 
-        DB::table('paquete_servicios')->insert($items);
+        DB::table('paquete_servicios')->insert(array_values($items));
     }
 }

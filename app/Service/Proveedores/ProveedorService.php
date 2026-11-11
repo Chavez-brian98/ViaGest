@@ -3,6 +3,7 @@
 namespace App\Service\Proveedores;
 
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class ProveedorService
             ->withQueryString();
     }
 
-    public function crear(array $datos, int $empleadoId): int
+    public function crear(array $datos, ?int $empleadoId = null): int
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
@@ -66,7 +67,7 @@ class ProveedorService
         });
     }
 
-    public function actualizar(int $id, array $datos, int $empleadoId): void
+    public function actualizar(int $id, array $datos, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $datos, $empleadoId): void {
             $anterior = DB::table('proveedores')->find($id);
@@ -91,7 +92,7 @@ class ProveedorService
         });
     }
 
-    public function cambiarEstado(int $id, string $estadoDestino, int $empleadoId): void
+    public function cambiarEstado(int $id, string $estadoDestino, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $estadoDestino, $empleadoId): void {
             $anterior = DB::table('proveedores')->find($id);
@@ -116,7 +117,7 @@ class ProveedorService
         });
     }
 
-    public function eliminar(int $id, int $empleadoId): void
+    public function eliminar(int $id, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $empleadoId): void {
             $proveedor = DB::table('proveedores')->find($id);
@@ -147,19 +148,7 @@ class ProveedorService
 
     public function generarCodigoSugerido(): string
     {
-        $codigos = DB::table('proveedores')
-            ->where('codigo', 'like', 'PROV-%')
-            ->pluck('codigo');
-
-        $secuencia = 0;
-
-        foreach ($codigos as $codigo) {
-            if (preg_match('/^PROV-(\d+)$/', (string) $codigo, $coincidencias) === 1) {
-                $secuencia = max($secuencia, (int) $coincidencias[1]);
-            }
-        }
-
-        return 'PROV-'.str_pad((string) ($secuencia + 1), 4, '0', STR_PAD_LEFT);
+        return GeneradorCodigoService::siguiente('proveedores', 'PROV-');
     }
 
     private function tieneRegistrosRelacionados(int $id): bool

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
+use App\Http\Requests\Paquetes\PaqueteEstadoRequest;
 use App\Http\Requests\Paquetes\PaqueteRequest;
 use App\Service\Paquetes\PaqueteService;
 use DomainException;
@@ -14,6 +16,8 @@ use Illuminate\View\View;
 
 class PaqueteController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly PaqueteService $paqueteService) {}
 
     public function index(Request $request): View|Response
@@ -26,10 +30,7 @@ class PaqueteController extends Controller
         ];
 
         $paquetes = $this->paqueteService->obtenerPaginado($filtros);
-        $parametrosListado = array_filter(
-            $filtros,
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros($filtros);
 
         if ($request->ajax()) {
             return response()->view('paquetes._tabla', compact('paquetes', 'parametrosListado'));
@@ -81,7 +82,7 @@ class PaqueteController extends Controller
     public function store(PaqueteRequest $request): RedirectResponse
     {
         try {
-            $this->paqueteService->crear($request->validated(), (int) auth()->id());
+            $this->paqueteService->crear($request->validated());
 
             return redirect()
                 ->route('paquetes.index')
@@ -116,7 +117,7 @@ class PaqueteController extends Controller
     public function update(PaqueteRequest $request, int $paquete): RedirectResponse
     {
         try {
-            $this->paqueteService->actualizar($paquete, $request->validated(), (int) auth()->id());
+            $this->paqueteService->actualizar($paquete, $request->validated());
 
             return redirect()
                 ->route('paquetes.index')
@@ -126,25 +127,23 @@ class PaqueteController extends Controller
         }
     }
 
-    public function actualizarEstado(Request $request, int $paquete): RedirectResponse|JsonResponse
+    public function actualizarEstado(PaqueteEstadoRequest $request, int $paquete): RedirectResponse|JsonResponse
     {
-        $request->validate(['estado_destino' => ['required', 'in:borrador,activo,inactivo']]);
+        $estadoDestino = (string) $request->validated('estado_destino');
 
         try {
-            $this->paqueteService->cambiarEstado(
-                $paquete,
-                (string) $request->input('estado_destino'),
-                (int) auth()->id(),
-            );
+            $this->paqueteService->cambiarEstado($paquete, $estadoDestino);
+
+            $mensaje = 'Estado del paquete actualizado correctamente.';
 
             if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => 'Estado del paquete actualizado correctamente.']);
+                return $this->respuestaJsonEstado($estadoDestino, $mensaje);
             }
 
-            return back()->with('success', 'Estado del paquete actualizado correctamente.');
+            return back()->with('success', $mensaje);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return back()->with('error', $e->getMessage());
@@ -154,7 +153,7 @@ class PaqueteController extends Controller
     public function destroy(int $paquete): RedirectResponse
     {
         try {
-            $this->paqueteService->eliminar($paquete, (int) auth()->id());
+            $this->paqueteService->eliminar($paquete);
 
             return redirect()
                 ->route('paquetes.index')

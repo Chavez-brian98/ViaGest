@@ -7,6 +7,7 @@ use App\Models\Rol;
 use App\Models\Sucursal;
 use App\Service\Auditoria\AuditoriaService;
 use App\Service\Roles\RolService;
+use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -209,14 +210,6 @@ class EmpleadoService
 
     public function siguienteCodigo(): string
     {
-        $numero = ((int) Empleado::query()->max('id')) + 1;
-
-        do {
-            $codigo = 'EMP-'.str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
-            $existe = Empleado::query()->where('codigo', $codigo)->exists();
-            $numero++;
-        } while ($existe);
-
-        return $codigo;
+        return GeneradorCodigoService::siguiente('empleados', 'EMP-');
     }
 }

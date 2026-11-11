@@ -216,4 +216,95 @@ class CupoTest extends TestCase
         $response->assertRedirect(route('cupos.index'));
         $this->assertDatabaseMissing('cupos', ['id' => $cupoId]);
     }
+
+    public function test_actualizar_cupo_con_ventas_bloquea_servicio_y_fechas(): void
+    {
+        $cupoId = DB::table('cupos')->insertGetId([
+            'servicio_id' => $this->servicioId,
+            'tipo' => 'bloqueo',
+            'fecha_inicio' => now()->addDays(5)->toDateString(),
+            'fecha_fin' => now()->addDays(10)->toDateString(),
+            'cantidad_total' => 20,
+            'estado' => 'activo',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $sucursalId = DB::table('sucursales')->value('id');
+
+        $clienteId = DB::table('clientes')->insertGetId([
+            'codigo' => 'CLI-001',
+            'sucursal_id' => $sucursalId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $ventaId = DB::table('ventas')->insertGetId([
+            'codigo' => 'VTA-001',
+            'cliente_id' => $clienteId,
+            'vendedor_id' => $this->empleado->id,
+            'sucursal_id' => $sucursalId,
+            'tipo' => 'servicios_individuales',
+            'fecha_venta' => now()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('venta_servicios')->insert([
+            'venta_id' => $ventaId,
+            'servicio_id' => $this->servicioId,
+            'cupo_id' => $cupoId,
+            'cantidad' => 3,
+            'costo_neto_unitario' => 350.00,
+            'precio_unitario' => 400.00,
+            'fecha_inicio' => now()->addDays(5)->toDateString(),
+            'estado' => 'confirmado',
+        ]);
+
+        $servicioAlternativoId = DB::table('servicios')->insertGetId([
+            'codigo' => 'SRV-002',
+            'tipo' => 'vuelo',
+            'nombre' => 'Vuelo alterno',
+            'proveedor_id' => DB::table('proveedores')->value('id'),
+            'costo_neto' => 300.00,
+            'unidad_cobro' => 'por_persona',
+            'estado' => 'activo',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->empleado)
+            ->put(route('cupos.update', $cupoId), [
+                'servicio_id' => $servicioAlternativoId,
+                'tipo' => 'bloqueo',
+                'fecha_inicio' => now()->addDays(5)->toDateString(),
+                'fecha_fin' => now()->addDays(10)->toDateString(),
+                'cantidad_total' => 25,
+                'estado' => 'activo',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('cupos', [
+            'id' => $cupoId,
+            'servicio_id' => $this->servicioId,
+            'cantidad_total' => 20,
+        ]);
+
+        $response = $this->actingAs($this->empleado)
+            ->put(route('cupos.update', $cupoId), [
+                'servicio_id' => $this->servicioId,
+                'tipo' => 'bloqueo',
+                'fecha_inicio' => now()->addDays(5)->toDateString(),
+                'fecha_fin' => now()->addDays(10)->toDateString(),
+                'cantidad_total' => 30,
+                'estado' => 'activo',
+            ]);
+
+        $response->assertRedirect(route('cupos.index'));
+        $this->assertDatabaseHas('cupos', [
+            'id' => $cupoId,
+            'cantidad_total' => 30,
+        ]);
+    }
 }

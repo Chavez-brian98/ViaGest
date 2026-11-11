@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
+use App\Http\Requests\Proveedores\ProveedorEstadoRequest;
 use App\Http\Requests\Proveedores\ProveedorRequest;
 use App\Service\Proveedores\ProveedorService;
 use DomainException;
@@ -14,6 +16,8 @@ use Illuminate\View\View;
 
 class ProveedorController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly ProveedorService $proveedorService) {}
 
     public function index(Request $request): View|Response
@@ -25,10 +29,7 @@ class ProveedorController extends Controller
         ];
 
         $proveedores = $this->proveedorService->obtenerPaginado($filtros);
-        $parametrosListado = array_filter(
-            $filtros,
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros($filtros);
 
         if ($request->ajax()) {
             return response()->view('proveedores._tabla', compact('proveedores', 'parametrosListado'));
@@ -66,7 +67,7 @@ class ProveedorController extends Controller
     public function store(ProveedorRequest $request): RedirectResponse
     {
         try {
-            $this->proveedorService->crear($request->validated(), (int) auth()->id());
+            $this->proveedorService->crear($request->validated());
 
             return redirect()
                 ->route('proveedores.index')
@@ -92,7 +93,7 @@ class ProveedorController extends Controller
     public function update(ProveedorRequest $request, int $proveedor): RedirectResponse
     {
         try {
-            $this->proveedorService->actualizar($proveedor, $request->validated(), (int) auth()->id());
+            $this->proveedorService->actualizar($proveedor, $request->validated());
 
             return redirect()
                 ->route('proveedores.index')
@@ -102,25 +103,23 @@ class ProveedorController extends Controller
         }
     }
 
-    public function actualizarEstado(Request $request, int $proveedor): RedirectResponse|JsonResponse
+    public function actualizarEstado(ProveedorEstadoRequest $request, int $proveedor): RedirectResponse|JsonResponse
     {
-        $request->validate(['estado_destino' => ['required', 'in:activo,inactivo']]);
+        $estadoDestino = (string) $request->validated('estado_destino');
 
         try {
-            $this->proveedorService->cambiarEstado(
-                $proveedor,
-                (string) $request->input('estado_destino'),
-                (int) auth()->id(),
-            );
+            $this->proveedorService->cambiarEstado($proveedor, $estadoDestino);
+
+            $mensaje = 'Estado actualizado correctamente.';
 
             if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => 'Estado actualizado correctamente.']);
+                return $this->respuestaJsonEstado($estadoDestino, $mensaje);
             }
 
-            return back()->with('success', 'Estado actualizado correctamente.');
+            return back()->with('success', $mensaje);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return back()->with('error', $e->getMessage());
@@ -130,7 +129,7 @@ class ProveedorController extends Controller
     public function destroy(int $proveedor): RedirectResponse
     {
         try {
-            $this->proveedorService->eliminar($proveedor, (int) auth()->id());
+            $this->proveedorService->eliminar($proveedor);
 
             return redirect()
                 ->route('proveedores.index')

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
+use App\Http\Requests\Cupos\CupoEstadoRequest;
 use App\Http\Requests\Cupos\CupoRequest;
 use App\Service\Cupos\CupoService;
 use DomainException;
@@ -14,6 +16,8 @@ use Illuminate\View\View;
 
 class CupoController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly CupoService $cupoService) {}
 
     public function index(Request $request): View|Response
@@ -26,10 +30,7 @@ class CupoController extends Controller
         ];
 
         $cupos = $this->cupoService->obtenerPaginado($filtros);
-        $parametrosListado = array_filter(
-            $filtros,
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros($filtros);
 
         if ($request->ajax()) {
             return response()->view('cupos._tabla', compact('cupos', 'parametrosListado'));
@@ -66,7 +67,7 @@ class CupoController extends Controller
     public function store(CupoRequest $request): RedirectResponse
     {
         try {
-            $this->cupoService->crear($request->validated(), (int) auth()->id());
+            $this->cupoService->crear($request->validated());
 
             return redirect()
                 ->route('cupos.index')
@@ -95,7 +96,7 @@ class CupoController extends Controller
     public function update(CupoRequest $request, int $cupo): RedirectResponse
     {
         try {
-            $this->cupoService->actualizar($cupo, $request->validated(), (int) auth()->id());
+            $this->cupoService->actualizar($cupo, $request->validated());
 
             return redirect()
                 ->route('cupos.index')
@@ -105,25 +106,23 @@ class CupoController extends Controller
         }
     }
 
-    public function actualizarEstado(Request $request, int $cupo): RedirectResponse|JsonResponse
+    public function actualizarEstado(CupoEstadoRequest $request, int $cupo): RedirectResponse|JsonResponse
     {
-        $request->validate(['estado_destino' => ['required', 'in:activo,liberado,cerrado']]);
+        $estadoDestino = (string) $request->validated('estado_destino');
 
         try {
-            $this->cupoService->cambiarEstado(
-                $cupo,
-                (string) $request->input('estado_destino'),
-                (int) auth()->id(),
-            );
+            $this->cupoService->cambiarEstado($cupo, $estadoDestino);
+
+            $mensaje = 'Estado del cupo actualizado correctamente.';
 
             if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => 'Estado del cupo actualizado correctamente.']);
+                return $this->respuestaJsonEstado($estadoDestino, $mensaje);
             }
 
-            return back()->with('success', 'Estado del cupo actualizado correctamente.');
+            return back()->with('success', $mensaje);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return back()->with('error', $e->getMessage());
@@ -133,7 +132,7 @@ class CupoController extends Controller
     public function destroy(int $cupo): RedirectResponse
     {
         try {
-            $this->cupoService->eliminar($cupo, (int) auth()->id());
+            $this->cupoService->eliminar($cupo);
 
             return redirect()
                 ->route('cupos.index')

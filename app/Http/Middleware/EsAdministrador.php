@@ -12,7 +12,7 @@ class EsAdministrador
     {
         $usuario = $request->user();
 
-        if (! $usuario || $usuario->rol?->nombre !== 'administrador') {
+        if (! $usuario || ! $usuario->esAdministrador()) {
             abort(403, 'Acceso restringido a administradores.');
         }
 

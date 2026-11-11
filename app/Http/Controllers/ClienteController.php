@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Clientes\ClienteEstadoRequest;
 use App\Http\Requests\Clientes\ClienteRequest;
 use App\Models\Cliente;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class ClienteController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly ClienteService $clienteService) {}
 
     public function index(Request $request): View|Response
@@ -22,10 +25,7 @@ class ClienteController extends Controller
         $buscar = trim((string) $request->query('buscar', ''));
         $filtros = $this->filtros($request);
         $clientes = $this->clienteService->listar($buscar, $filtros);
-        $parametrosListado = array_filter(
-            ['buscar' => $buscar, ...$filtros],
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros(['buscar' => $buscar, ...$filtros]);
 
         if ($request->ajax()) {
             return response()->view('clientes._tabla', compact('clientes', 'buscar', 'filtros', 'parametrosListado'));
@@ -88,10 +88,7 @@ class ClienteController extends Controller
         $mensaje = "Cliente {$cliente->nombreMostrado()} {$accion} correctamente.";
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'estado' => $cliente->estado,
-                'mensaje' => $mensaje,
-            ]);
+            return $this->respuestaJsonEstado($cliente->estado, $mensaje);
         }
 
         return $this->volverAlListado($request)->with('success', $mensaje);
@@ -119,13 +116,10 @@ class ClienteController extends Controller
 
     private function volverAlListado(Request $request): RedirectResponse
     {
-        $buscar = trim((string) $request->input('buscar', ''));
-        $parametros = array_filter(
-            ['buscar' => $buscar, ...$this->filtros($request)],
-            fn ($valor) => $valor !== '',
-        );
-
-        return redirect()->route('clientes.index', $parametros);
+        return $this->redireccionarAListado('clientes.index', [
+            'buscar' => trim((string) $request->input('buscar', '')),
+            ...$this->filtros($request),
+        ]);
     }
 
     private function filtros(Request $request): array

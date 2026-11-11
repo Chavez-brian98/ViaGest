@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Paquetes;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -130,6 +131,21 @@ class PaqueteRequest extends FormRequest
             'servicios' => [
                 'nullable',
                 'array',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $vistos = [];
+
+                    foreach ((array) $value as $item) {
+                        $clave = ($item['servicio_id'] ?? '').'-'.($item['dia_inicio'] ?? '');
+
+                        if (isset($vistos[$clave])) {
+                            $fail('No puedes asociar el mismo servicio turístico más de una vez para el mismo día.');
+
+                            return;
+                        }
+
+                        $vistos[$clave] = true;
+                    }
+                },
             ],
             'servicios.*.servicio_id' => [
                 'required',

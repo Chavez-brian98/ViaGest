@@ -4,6 +4,7 @@ namespace App\Service\Dashboard;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
@@ -66,12 +67,27 @@ class DashboardService
 
     private function evolucion12Meses(): array
     {
-        $inicio = CarbonImmutable::now()->startOfMonth()->subMonths(11);
-        $ventas = DB::table('v_venta_totales')->where('estado', '!=', 'cancelada')->where('fecha_venta', '>=', $inicio->toDateString())->get(['fecha_venta', 'total']);
+        return $this->obtenerVentasMensuales(12);
+    }
+
+    public function ventasPorMes(int $meses = 12): array
+    {
+        $resultado = $this->obtenerVentasMensuales($meses);
+
+        return ['labels' => $resultado['labels'], 'data' => $resultado['series']];
+    }
+
+    private function obtenerVentasMensuales(int $meses = 12): array
+    {
+        $inicio = CarbonImmutable::now()->startOfMonth()->subMonths($meses - 1);
+        $ventas = DB::table('v_venta_totales')
+            ->where('estado', '!=', 'cancelada')
+            ->where('fecha_venta', '>=', $inicio->toDateString())
+            ->get(['fecha_venta', 'total']);
 
         $labels = [];
         $series = [];
-        for ($i = 0; $i < 12; $i++) {
+        for ($i = 0; $i < $meses; $i++) {
             $mes = $inicio->addMonthsNoOverflow($i);
             $labels[] = $this->meses[$mes->month - 1].' '.$mes->format('y');
             $series[] = round((float) $ventas->filter(fn ($venta) => str_starts_with((string) $venta->fecha_venta, $mes->format('Y-m')))->sum('total'), 2);
@@ -82,9 +98,29 @@ class DashboardService
 
     private function ventasPorSucursalMes(): array
     {
+        $filas = $this->obtenerVentasPorSucursalMes();
+
+        return [
+            'labels' => $filas->pluck('sucursal')->all(),
+            'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all(),
+        ];
+    }
+
+    public function ventasPorSucursal(): array
+    {
+        return $this->obtenerVentasPorSucursalMes()
+            ->map(fn ($fila) => ['label' => $fila->sucursal, 'value' => round((float) $fila->total, 2)])
+            ->all();
+    }
+
+    private function obtenerVentasPorSucursalMes(): Collection
+    {
         $mesActual = CarbonImmutable::now()->format('Y-m');
         $driver = DB::getDriverName();
-        $query = DB::table('v_venta_totales as t')->join('sucursales as s', 's.id', '=', 't.sucursal_id')->where('t.estado', '!=', 'cancelada');
+        $query = DB::table('v_venta_totales as t')
+            ->join('sucursales as s', 's.id', '=', 't.sucursal_id')
+            ->where('t.estado', '!=', 'cancelada');
+
         if ($driver === 'sqlite') {
             $query->whereRaw("strftime('%Y-%m', t.fecha_venta) = ?", [$mesActual]);
         } elseif ($driver === 'mysql') {
@@ -92,27 +128,58 @@ class DashboardService
         } else {
             $query->whereRaw("to_char(t.fecha_venta, 'YYYY-MM') = ?", [$mesActual]);
         }
-        $filas = $query->selectRaw('s.nombre as etiqueta, SUM(t.total) as total')->groupBy('s.nombre')->orderByDesc('total')->get();
 
-        return ['labels' => $filas->pluck('etiqueta')->all(), 'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all()];
+        return $query->selectRaw('s.nombre as sucursal, SUM(t.total) as total')
+            ->groupBy('s.nombre')
+            ->orderByDesc('total')
+            ->get();
     }
 
     private function ventasPorTipoServicio(): array
     {
-        $filas = DB::table('venta_servicios as vs')
+        $filas = $this->obtenerVentasPorTipoServicio();
+
+        return [
+            'labels' => $filas->pluck('etiqueta')->all(),
+            'series' => $filas->pluck('total')->all(),
+        ];
+    }
+
+    public function ventasPorServicio(): array
+    {
+        return $this->obtenerVentasPorTipoServicio()
+            ->map(fn ($fila) => ['label' => $fila->etiqueta, 'value' => $fila->total])
+            ->all();
+    }
+
+    private function obtenerVentasPorTipoServicio(): Collection
+    {
+        $mapa = [
+            'vuelo' => 'Vuelos',
+            'hospedaje' => 'Hospedajes',
+            'transporte' => 'Transporte',
+            'actividad' => 'Actividades',
+            'paquete' => 'Paquetes',
+            'otro' => 'Otros',
+        ];
+
+        return DB::table('venta_servicios as vs')
             ->join('servicios as s', 's.id', '=', 'vs.servicio_id')
             ->join('ventas as v', 'v.id', '=', 'vs.venta_id')
             ->where('vs.estado', '!=', 'cancelado')
             ->where('v.estado', '!=', 'cancelada')
             ->where('v.fecha_venta', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(2)->toDateString())
-            ->selectRaw('s.tipo as etiqueta, SUM(vs.cantidad * vs.precio_unitario) as total')
+            ->selectRaw('s.tipo as tipo, SUM(vs.cantidad * vs.precio_unitario) as total')
             ->groupBy('s.tipo')
             ->orderByDesc('total')
-            ->get();
-
-        $mapa = ['vuelo' => 'Vuelos', 'hospedaje' => 'Hospedajes', 'transporte' => 'Transporte', 'actividad' => 'Actividades', 'paquete' => 'Paquetes', 'otro' => 'Otros'];
-
-        return ['labels' => $filas->map(fn ($fila) => $mapa[$fila->etiqueta] ?? ucfirst((string) $fila->etiqueta))->all(), 'series' => $filas->map(fn ($fila) => round((float) $fila->total, 2))->all()];
+            ->get()
+            ->map(function ($fila) use ($mapa) {
+                return (object) [
+                    'tipo' => $fila->tipo,
+                    'etiqueta' => $mapa[$fila->tipo] ?? ucfirst((string) $fila->tipo),
+                    'total' => round((float) $fila->total, 2),
+                ];
+            });
     }
 
     private function estadoCobranza(): array
@@ -153,56 +220,6 @@ class DashboardService
             ->get();
 
         return ['labels' => $filas->pluck('etiqueta')->all(), 'series' => $filas->pluck('disponible')->map(fn ($v) => (int) $v)->all()];
-    }
-
-    public function ventasPorMes(int $meses = 12): array
-    {
-        $inicio = CarbonImmutable::now()->startOfMonth()->subMonths($meses - 1);
-        $ventas = DB::table('v_venta_totales')->where('estado', '!=', 'cancelada')->where('fecha_venta', '>=', $inicio->toDateString())->get(['fecha_venta', 'total']);
-        $etiquetas = [];
-        $montos = [];
-        for ($i = 0; $i < $meses; $i++) {
-            $mes = $inicio->addMonthsNoOverflow($i);
-            $etiquetas[] = $this->meses[$mes->month - 1].' '.$mes->format('y');
-            $montos[] = round((float) $ventas->filter(fn ($venta) => str_starts_with((string) $venta->fecha_venta, $mes->format('Y-m')))->sum('total'), 2);
-        }
-
-        return ['labels' => $etiquetas, 'data' => $montos];
-    }
-
-    public function ventasPorServicio(): array
-    {
-        $filas = DB::table('venta_servicios as vs')
-            ->join('servicios as s', 's.id', '=', 'vs.servicio_id')
-            ->join('ventas as v', 'v.id', '=', 'vs.venta_id')
-            ->where('vs.estado', '!=', 'cancelado')
-            ->where('v.estado', '!=', 'cancelada')
-            ->where('v.fecha_venta', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(2)->toDateString())
-            ->selectRaw('s.tipo as tipo, SUM(vs.cantidad * vs.precio_unitario) as total')
-            ->groupBy('s.tipo')
-            ->orderByDesc('total')
-            ->get();
-
-        $mapa = ['vuelo' => 'Vuelos', 'hospedaje' => 'Hospedajes', 'transporte' => 'Transporte', 'actividad' => 'Actividades', 'paquete' => 'Paquetes', 'otro' => 'Otros'];
-
-        return $filas->map(fn ($fila) => ['label' => $mapa[$fila->tipo] ?? ucfirst((string) $fila->tipo), 'value' => round((float) $fila->total, 2)])->all();
-    }
-
-    public function ventasPorSucursal(): array
-    {
-        $mesActual = CarbonImmutable::now()->format('Y-m');
-        $driver = DB::getDriverName();
-        $query = DB::table('v_venta_totales as t')->join('sucursales as s', 's.id', '=', 't.sucursal_id')->where('t.estado', '!=', 'cancelada');
-        if ($driver === 'sqlite') {
-            $query->whereRaw("strftime('%Y-%m', t.fecha_venta) = ?", [$mesActual]);
-        } elseif ($driver === 'mysql') {
-            $query->whereRaw("DATE_FORMAT(t.fecha_venta, '%Y-%m') = ?", [$mesActual]);
-        } else {
-            $query->whereRaw("to_char(t.fecha_venta, 'YYYY-MM') = ?", [$mesActual]);
-        }
-        $filas = $query->selectRaw('s.nombre as sucursal, SUM(t.total) as total')->groupBy('s.nombre')->orderByDesc('total')->get();
-
-        return $filas->map(fn ($fila) => ['label' => $fila->sucursal, 'value' => round((float) $fila->total, 2)])->all();
     }
 
     public function cuotasProximas(int $porPagina = 8): LengthAwarePaginator

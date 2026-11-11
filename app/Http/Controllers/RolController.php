@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
+use App\Http\Requests\Roles\RolEstadoRequest;
+use App\Http\Requests\Roles\RolPermisosRequest;
 use App\Http\Requests\Roles\RolRequest;
 use App\Models\Rol;
 use App\Service\Roles\RolService;
@@ -14,6 +17,8 @@ use Illuminate\View\View;
 
 class RolController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly RolService $rolService) {}
 
     public function index(Request $request): View|Response
@@ -22,10 +27,7 @@ class RolController extends Controller
         $filtros = $this->filtros($request);
         $roles = $this->rolService->listar($buscar, $filtros);
 
-        $parametrosListado = array_filter(
-            ['buscar' => $buscar, ...$filtros],
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros(['buscar' => $buscar, ...$filtros]);
 
         $modulosEtiquetas = RolService::MODULOS_ETIQUETAS;
         $acciones = RolService::ACCIONES;
@@ -82,15 +84,15 @@ class RolController extends Controller
             ->with('success', "Rol \"{$role->nombre}\" actualizado correctamente.");
     }
 
-    public function actualizarEstado(Request $request, Rol $role): RedirectResponse|JsonResponse
+    public function actualizarEstado(RolEstadoRequest $request, Rol $role): RedirectResponse|JsonResponse
     {
-        $estadoDestino = (string) $request->input('estado_destino');
+        $estadoDestino = (string) $request->validated('estado_destino');
 
         try {
             $rol = $this->rolService->actualizarEstado($role, $estadoDestino);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['error' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return $this->volverAlListado($request)->with('error', $e->getMessage());
@@ -100,24 +102,21 @@ class RolController extends Controller
         $mensaje = "Rol \"{$rol->nombre}\" {$accion} correctamente.";
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'estado' => $rol->estado,
-                'mensaje' => $mensaje,
-            ]);
+            return $this->respuestaJsonEstado($rol->estado, $mensaje);
         }
 
         return $this->volverAlListado($request)->with('success', $mensaje);
     }
 
-    public function actualizarPermisos(Request $request, Rol $role): RedirectResponse|JsonResponse
+    public function actualizarPermisos(RolPermisosRequest $request, Rol $role): RedirectResponse|JsonResponse
     {
-        $permisos = $request->input('permisos', []);
+        $permisos = $request->validated('permisos', []);
 
         try {
             $this->rolService->actualizarPermisos($role, is_array($permisos) ? $permisos : []);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['error' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return $this->volverAlListado($request)->with('error', $e->getMessage());
@@ -127,7 +126,9 @@ class RolController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
+                'success' => true,
                 'mensaje' => $mensaje,
+                'message' => $mensaje,
                 'permisos' => $role->permisosAgrupados(),
             ]);
         }
@@ -150,13 +151,10 @@ class RolController extends Controller
 
     private function volverAlListado(Request $request): RedirectResponse
     {
-        $buscar = trim((string) $request->input('buscar', ''));
-        $parametros = array_filter(
-            ['buscar' => $buscar, ...$this->filtros($request)],
-            fn ($valor) => $valor !== '',
-        );
-
-        return redirect()->route('roles.index', $parametros);
+        return $this->redireccionarAListado('roles.index', [
+            'buscar' => trim((string) $request->input('buscar', '')),
+            ...$this->filtros($request),
+        ]);
     }
 
     private function filtros(Request $request): array

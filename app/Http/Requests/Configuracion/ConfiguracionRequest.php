@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Configuracion;
 
+use App\Service\Configuracion\ConfiguracionService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,10 +48,7 @@ class ConfiguracionRequest extends FormRequest
 
     public function rules(): array
     {
-        $monedas = [
-            'USD', 'EUR', 'GTQ', 'HNL', 'NIO', 'CRC', 'PAB', 'DOP',
-            'MXN', 'COP', 'PEN', 'CLP', 'ARS', 'BRL', 'CAD', 'GBP',
-        ];
+        $monedas = array_keys(ConfiguracionService::MONEDAS);
 
         return [
             'nombre_comercial' => ['required', 'string', 'max:150'],

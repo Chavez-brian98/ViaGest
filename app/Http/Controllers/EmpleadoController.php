@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\InteractuaConListados;
 use App\Http\Requests\Empleados\EmpleadoEstadoRequest;
+use App\Http\Requests\Empleados\EmpleadoPermisosRequest;
 use App\Http\Requests\Empleados\EmpleadoRequest;
 use App\Models\Empleado;
 use App\Service\Empleados\EmpleadoService;
@@ -15,6 +17,8 @@ use Illuminate\View\View;
 
 class EmpleadoController extends Controller
 {
+    use InteractuaConListados;
+
     public function __construct(private readonly EmpleadoService $empleadoService) {}
 
     public function index(Request $request): View|Response
@@ -22,10 +26,7 @@ class EmpleadoController extends Controller
         $buscar = trim((string) $request->query('buscar', ''));
         $filtros = $this->filtros($request);
         $empleados = $this->empleadoService->listar($buscar, $filtros);
-        $parametrosListado = array_filter(
-            ['buscar' => $buscar, ...$filtros],
-            fn ($valor) => $valor !== '',
-        );
+        $parametrosListado = $this->limpiarParametros(['buscar' => $buscar, ...$filtros]);
 
         if ($request->ajax()) {
             return response()->view('empleados._tabla', compact('empleados', 'buscar', 'filtros', 'parametrosListado'));
@@ -89,10 +90,7 @@ class EmpleadoController extends Controller
         $mensaje = "Empleado {$empleado->nombreCompleto()} {$accion} correctamente.";
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'estado' => $empleado->estado,
-                'mensaje' => $mensaje,
-            ]);
+            return $this->respuestaJsonEstado($empleado->estado, $mensaje);
         }
 
         return $this->volverAlListado($request)->with('success', $mensaje);
@@ -106,15 +104,15 @@ class EmpleadoController extends Controller
             ->with('success', "Empleado {$empleado->nombreCompleto()} deshabilitado. Ya puedes eliminarlo si es necesario.");
     }
 
-    public function actualizarPermisos(Request $request, Empleado $empleado): RedirectResponse|JsonResponse
+    public function actualizarPermisos(EmpleadoPermisosRequest $request, Empleado $empleado): RedirectResponse|JsonResponse
     {
-        $overrides = $request->input('permisos', []);
+        $overrides = $request->validated('permisos', []);
 
         try {
             $this->empleadoService->actualizarPermisos($empleado, is_array($overrides) ? $overrides : []);
         } catch (DomainException $e) {
             if ($request->expectsJson()) {
-                return response()->json(['error' => $e->getMessage()], 422);
+                return $this->respuestaJsonError($e->getMessage());
             }
 
             return $this->volverAlListado($request)->with('error', $e->getMessage());
@@ -124,7 +122,9 @@ class EmpleadoController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
+                'success' => true,
                 'mensaje' => $mensaje,
+                'message' => $mensaje,
                 'overrides' => $empleado->overridesPermisos(),
             ]);
         }
@@ -146,13 +146,10 @@ class EmpleadoController extends Controller
 
     private function volverAlListado(Request $request): RedirectResponse
     {
-        $buscar = trim((string) $request->input('buscar', ''));
-        $parametros = array_filter(
-            ['buscar' => $buscar, ...$this->filtros($request)],
-            fn ($valor) => $valor !== '',
-        );
-
-        return redirect()->route('empleados.index', $parametros);
+        return $this->redireccionarAListado('empleados.index', [
+            'buscar' => trim((string) $request->input('buscar', '')),
+            ...$this->filtros($request),
+        ]);
     }
 
     private function filtros(Request $request): array

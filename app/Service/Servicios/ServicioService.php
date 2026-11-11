@@ -3,6 +3,7 @@
 namespace App\Service\Servicios;
 
 use App\Service\Auditoria\AuditoriaService;
+use App\Service\Shared\GeneradorCodigoService;
 use DomainException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -82,7 +83,7 @@ class ServicioService
             ->get(['id', 'nombre', 'pais_codigo']);
     }
 
-    public function crear(array $datos, int $empleadoId): int
+    public function crear(array $datos, ?int $empleadoId = null): int
     {
         return DB::transaction(function () use ($datos, $empleadoId) {
             $datos['estado'] ??= 'activo';
@@ -104,7 +105,7 @@ class ServicioService
         });
     }
 
-    public function actualizar(int $id, array $datos, int $empleadoId): void
+    public function actualizar(int $id, array $datos, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $datos, $empleadoId): void {
             $anterior = DB::table('servicios')->find($id);
@@ -128,7 +129,7 @@ class ServicioService
         });
     }
 
-    public function cambiarEstado(int $id, string $estadoDestino, int $empleadoId): void
+    public function cambiarEstado(int $id, string $estadoDestino, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $estadoDestino, $empleadoId): void {
             $anterior = DB::table('servicios')->find($id);
@@ -153,7 +154,7 @@ class ServicioService
         });
     }
 
-    public function eliminar(int $id, int $empleadoId): void
+    public function eliminar(int $id, ?int $empleadoId = null): void
     {
         DB::transaction(function () use ($id, $empleadoId): void {
             $servicio = DB::table('servicios')->find($id);
@@ -184,19 +185,7 @@ class ServicioService
 
     public function generarCodigoSugerido(): string
     {
-        $codigos = DB::table('servicios')
-            ->where('codigo', 'like', 'SRV-%')
-            ->pluck('codigo');
-
-        $secuencia = 0;
-
-        foreach ($codigos as $codigo) {
-            if (preg_match('/^SRV-(\d+)$/', (string) $codigo, $coincidencias) === 1) {
-                $secuencia = max($secuencia, (int) $coincidencias[1]);
-            }
-        }
-
-        return 'SRV-'.str_pad((string) ($secuencia + 1), 4, '0', STR_PAD_LEFT);
+        return GeneradorCodigoService::siguiente('servicios', 'SRV-');
     }
 
     private function tieneRegistrosRelacionados(int $id): bool

@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 
 class AuditoriaService
@@ -23,7 +24,7 @@ class AuditoriaService
     public static function registrar(array $datos): void
     {
         Auditoria::create([
-            'empleado_id' => $datos['empleado_id'] ?? null,
+            'empleado_id' => $datos['empleado_id'] ?? Auth::id(),
             'accion' => $datos['accion'],
             'tabla' => $datos['tabla'] ?? null,
             'registro_id' => $datos['registro_id'] ?? null,

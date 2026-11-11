@@ -68,23 +68,6 @@ class ConfiguracionController extends Controller
 
     private function monedas(): array
     {
-        return [
-            'USD' => 'USD — Dólar estadounidense',
-            'EUR' => 'EUR — Euro',
-            'GTQ' => 'GTQ — Quetzal guatemalteco',
-            'HNL' => 'HNL — Lempira hondureño',
-            'NIO' => 'NIO — Córdoba nicaragüense',
-            'CRC' => 'CRC — Colón costarricense',
-            'PAB' => 'PAB — Balboa panameño',
-            'DOP' => 'DOP — Peso dominicano',
-            'MXN' => 'MXN — Peso mexicano',
-            'COP' => 'COP — Peso colombiano',
-            'PEN' => 'PEN — Sol peruano',
-            'CLP' => 'CLP — Peso chileno',
-            'ARS' => 'ARS — Peso argentino',
-            'BRL' => 'BRL — Real brasileño',
-            'CAD' => 'CAD — Dólar canadiense',
-            'GBP' => 'GBP — Libra esterlina',
-        ];
+        return ConfiguracionService::MONEDAS;
     }
 }

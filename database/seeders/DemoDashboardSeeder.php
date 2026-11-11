@@ -94,7 +94,7 @@ class DemoDashboardSeeder extends Seeder
         DB::transaction(function () use ($now, $sucursalId, $vendedorId, $clienteId, $servicioId, $cupoId, $proveedorId) {
             for ($i = 0; $i < 6; $i++) {
                 $fechaVenta = $now->copy()->subMonths(rand(0, 11))->subDays(rand(0, 20));
-                $codigo = 'V-' . $fechaVenta->format('ym') . '-' . strtoupper(Str::random(4));
+                $codigo = 'V-'.$fechaVenta->format('ym').'-'.strtoupper(Str::random(4));
 
                 $ventaId = DB::table('ventas')->insertGetId([
                     'codigo' => $codigo,
